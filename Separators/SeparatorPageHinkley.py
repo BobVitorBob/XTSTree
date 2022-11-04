@@ -17,12 +17,14 @@ class SeparatorPageHinkley(Separator):
 		if self.stop_condition == 'depth':
 			split_tree = Tree()
 			threshold = self.threshold
-			cuts = self._find_splits(series, threshold)
-			return cuts
+			cuts, threshold = self._find_splits(series, threshold)
+			return cuts, threshold
 		else:
 			raise ValueError(f'Stop condition {self.stop_condition} not supported')
  
 	def _find_splits(self, series: Iterable, threshold):
+		min_threshold = 0
+		max_threshold = -1
 		for _ in range(self.max_iter):
 			ph = PageHinkley(self.delta, threshold, mode='both')
 			cuts = []
@@ -33,11 +35,16 @@ class SeparatorPageHinkley(Separator):
 					if len(cuts) > self.stop_val:
 						break
 			if len(cuts) == self.stop_val:
-				return cuts
+				return cuts, threshold
 			elif len(cuts) < self.stop_val:
-				threshold = (threshold/2)
 				print(len(cuts), threshold)
+				max_threshold = threshold
+				threshold -= (threshold-min_threshold)/2
 			elif len(cuts) > self.stop_val:
-				threshold += threshold/2
 				print(len(cuts), threshold)
-		return cuts
+				min_threshold = threshold
+				if max_threshold < -1:
+					threshold += threshold/2
+				else:
+					threshold += (max_threshold - threshold)/2
+		return cuts, threshold
