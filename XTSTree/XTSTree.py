@@ -1,7 +1,7 @@
+from Structures.Tree import Tree, TreeNode
 from collections.abc import Iterable
 from typing import Callable, Optional
-from statsmodels.tsa.stattools import adfuller
-from Structures.Tree import Tree, TreeNode
+from pmdarima.arima import ADFTest
 
 class XTSTree:
   
@@ -16,8 +16,7 @@ class XTSTree:
     return depth >= (self.stop_val - 1)
   
   def _adf_stop_condition(self, series: Iterable, depth:int):
-    adf = adfuller(series)
-    return adf[1] < self.stop_val
+    return ADFTest(self.stop_val).should_diff(series)[1]
   
   # Cria a árvore e acha os splits para uma série
   def create_splits(self, series: Iterable):
@@ -53,4 +52,3 @@ class XTSTree:
   # Função que encontra a posição de corte, única para cada método de corte
   def _find_cut(self, series: Iterable, params: dict) -> (int, dict):
     pass
-    
