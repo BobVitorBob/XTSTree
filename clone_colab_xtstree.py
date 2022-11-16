@@ -105,7 +105,7 @@ class Tree:
 
 from collections.abc import Iterable
 from typing import Callable, Optional
-from statsmodels.tsa.stattools import adfuller
+from pmdarima.arima import ADFTest
 
 class XTSTree:
   
@@ -120,8 +120,7 @@ class XTSTree:
     return depth >= (self.stop_val - 1)
   
   def _adf_stop_condition(self, series: Iterable, depth:int):
-    adf = adfuller(series)
-    return adf[1] < self.stop_val
+    return ADFTest(self.stop_val).should_diff(series)[1]
   
   # Cria a árvore e acha os splits para uma série
   def create_splits(self, series: Iterable):
@@ -243,10 +242,10 @@ def seq_data(data, window_size=96):
 
 from statsmodels.tsa.seasonal import seasonal_decompose
 
-series_len = 15 * 96
+series_len = 10 * 96
 
-# series = pd.read_csv(series_path, nrows=series_len)['umidrelmed2m']
-series = pd.read_csv(series_path)['umidrelmed2m']
+series = pd.read_csv(series_path, nrows=series_len)['umidrelmed2m']
+# series = pd.read_csv(series_path)['umidrelmed2m']
 # series = [(math.sin(x/100)) for x in range(1000)] + [(math.sin(x/10)) for x in range(1000)]
 
 
@@ -262,6 +261,8 @@ plot(series)
 print('Criando splits')
 
 adf = 0.05
+
+print(ADFTest(adf).should_diff(series))
 
 t = time.perf_counter()
 sep = XTSTreePageHinkley(stop_condition='adf', stop_val=adf, min_dist=30)
