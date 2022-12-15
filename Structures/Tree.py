@@ -15,15 +15,6 @@ class Tree:
   def to_list(self):
     return Tree._sub_node_to_list(self.root)
 
-  def get_leaves(self):
-    return Tree._get_leaves(self.root)
-      
-  @staticmethod
-  def _get_leaves(node: TreeNode):
-    if node.left is None and node.right is None:
-      return [node.cont]
-    return [*Tree._get_leaves(node.left), *Tree._get_leaves(node.right)]
-
   @staticmethod
   def _sub_node_to_list(node: TreeNode):
     if node is None:
