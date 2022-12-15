@@ -23,6 +23,15 @@ class Tree:
 
   def __len__(self):
     return Tree._count_nodes(self.root)
+  
+  def depth(self):
+    return Tree._count_depth(self.root, depth=1)
+  
+  @staticmethod
+  def _count_depth(node, depth):
+    if node is None:
+      return 0
+    return max([depth, Tree._count_depth(node.left, depth+1), Tree._count_depth(node.right, depth+1)])
     
   @staticmethod
   def _count_nodes(node: TreeNode):
