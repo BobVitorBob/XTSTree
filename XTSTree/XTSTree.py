@@ -63,6 +63,38 @@ class XTSTree:
   def cut_points(self):
     return XTSTree._get_cut_points(self.tree.root)
 
+  def depth(self):
+    return self.tree.depth()
+  
+  def cut_series_by_depth(self, series):
+    cuts_by_depth = self.get_cuts_by_depth()
+    cut_series = {}
+    for depth in cuts_by_depth.keys():
+      cuts = sorted([cut for i in range(depth+1) for cut in cuts_by_depth[i]])
+      cut_series[depth] = [series[start:end] for start, end in zip([0] + cuts, cuts + [len(series)])]
+    return cut_series
+
+  def get_cuts_by_depth(self):
+    return XTSTree._get_cuts_by_depth(node=self.tree.root, depth=0)
+  
+  @staticmethod
+  def _get_cuts_by_depth(node: TreeNode, depth: int):
+    if node is None:
+      return {}
+    cuts_dict = {depth: [node.cont]}
+    for key, val in XTSTree._get_cuts_by_depth(node=node.left, depth=depth + 1).items():
+      if key in cuts_dict:
+        cuts_dict[key] += val
+      else:
+        cuts_dict[key] = val
+    for key, val in XTSTree._get_cuts_by_depth(node=node.right, depth=depth + 1).items():
+      if key in cuts_dict:
+        cuts_dict[key] += [cut + node.cont for cut in val]
+      else:
+        cuts_dict[key] = [cut + node.cont for cut in val]
+    
+    return cuts_dict
+
   @staticmethod
   def _get_cuts(node: TreeNode, series: Iterable):
     if node is None:
