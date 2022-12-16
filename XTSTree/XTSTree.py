@@ -74,26 +74,52 @@ class XTSTree:
       cut_series[depth] = [series[start:end] for start, end in zip([0] + cuts, cuts + [len(series)])]
     return cut_series
 
-  def get_cuts_by_depth(self):
-    return XTSTree._get_cuts_by_depth(node=self.tree.root, depth=0)
+  def get_items_by_depth(self):
+    return XTSTree._get_items_by_depth(node=self.tree.root, depth=0)
   
   @staticmethod
-  def _get_cuts_by_depth(node: TreeNode, depth: int):
+  def _get_items_by_depth(node: TreeNode, depth: int):
     if node is None:
       return {}
-    cuts_dict = {depth: [node.cont]}
-    for key, val in XTSTree._get_cuts_by_depth(node=node.left, depth=depth + 1).items():
-      if key in cuts_dict:
-        cuts_dict[key] += val
+    items_dict = {depth: [node.cont]}
+    for key, val in XTSTree._get_items_by_depth(node=node.left, depth=depth + 1).items():
+      if key in items_dict:
+        items_dict[key] += val
       else:
-        cuts_dict[key] = val
-    for key, val in XTSTree._get_cuts_by_depth(node=node.right, depth=depth + 1).items():
-      if key in cuts_dict:
-        cuts_dict[key] += [cut + node.cont for cut in val]
+        items_dict[key] = val
+    for key, val in XTSTree._get_items_by_depth(node=node.right, depth=depth + 1).items():
+      if key in items_dict:
+        items_dict[key] += [item + node.cont for item in val]
       else:
-        cuts_dict[key] = [cut + node.cont for cut in val]
+        items_dict[key] = [item + node.cont for item in val]
     
-    return cuts_dict
+    return items_dict
+  
+  def __repr__(self):
+    return self.summary()
+  
+  def summary(self):
+    return XTSTree._get_items_by_depth_side(self.tree.root, depth=0, side_prefix='Root')
+  
+  @staticmethod
+  def _get_items_by_depth_side(node: TreeNode, depth: int, side_prefix='Root'):
+    if node is None:
+      return {}
+    items_dict = {depth: [{side_prefix: node.cont}]}
+    if side_prefix == 'Root':
+      side_prefix = ''
+    for key, val in XTSTree._get_items_by_depth_side(node=node.left, depth=depth + 1, side_prefix=side_prefix+'L').items():
+      if key in items_dict:
+        items_dict[key] += val
+      else:
+        items_dict[key] = val
+    for key, val in XTSTree._get_items_by_depth_side(node=node.right, depth=depth + 1, side_prefix=side_prefix+'R').items():
+      if key in items_dict:
+        items_dict[key] += [{side: cut+node.cont} for item in val for side, cut in item.items()]
+      else:
+        items_dict[key] = [{side: cut+node.cont} for item in val for side, cut in item.items()]
+    
+    return items_dict
 
   @staticmethod
   def _get_cuts(node: TreeNode, series: Iterable):
