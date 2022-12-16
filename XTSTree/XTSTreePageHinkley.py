@@ -4,7 +4,7 @@ from river.drift import PageHinkley
 
 class XTSTreePageHinkley(XTSTree):
   
-  def __init__(self, stop_condition: str='depth', stop_val=2, max_iter=1000, min_dist=30, min_instances: int=30, delta: float=0.005, starting_threshold: float=50.0, alpha: float=1 - 0.0001):
+  def __init__(self, stop_condition: str='depth', stop_val=2, max_iter=1000, min_dist:int=30, min_instances: int=30, delta: float=0.005, starting_threshold: float=50.0, alpha: float=1 - 0.0001):
     self.min_instances = min_instances
     self.delta = delta
     self.threshold = starting_threshold
@@ -22,7 +22,7 @@ class XTSTreePageHinkley(XTSTree):
     # Limitando o número de iterações pra um máximo
     for n_iter in range(self.max_iter):
       # Pra reforçar a distância mínima entre cortes, o número de instâncias mínimas até detectar mudança é colocado como a distância mínima, e a série é analisada até os último min_dist elementos.
-      ph = PageHinkley(min_instances=self.min_dist, delta=self.delta, threshold=threshold)
+      ph = PageHinkley(min_instances=self.min_instances, delta=self.delta, threshold=threshold)
       cut_pos = []
       for i, val in enumerate(series[:-self.min_dist]):
         ph.update(val)
@@ -53,7 +53,7 @@ class XTSTreePageHinkley(XTSTree):
 
     if n_cuts == 0:
       # Se não achou cortes, pega os cortes da threshold máxima.
-      ph = PageHinkley(min_instances=self.min_dist, delta=self.delta, threshold=min_threshold)
+      ph = PageHinkley(min_instances=self.min_instances, delta=self.delta, threshold=min_threshold)
       cut_pos = []
       for i, val in enumerate(series[:-self.min_dist]):
         ph.update(val)
