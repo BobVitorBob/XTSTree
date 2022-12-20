@@ -28,7 +28,7 @@ class XTSTree:
   # Cria a árvore e acha os splits para uma série
   def create_splits(self, series: Iterable):
     self.tree.root = self._recursive_tree(series, params=self.params)
-    return self.tree
+    return self
 
   # Função recursiva para encontrar os nós e criar a árvore
   def _recursive_tree(self, series: Iterable, params: dict, curr_depth=0):
