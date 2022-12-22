@@ -14,6 +14,8 @@ import numpy as np
 import os
 
 
+import wandb
+
 
 def mae(y, y_hat):
     return np.mean(np.abs(y - y_hat))
@@ -53,8 +55,6 @@ def mase(y, y_hat, y_train):
 
     return mae / mae_in_sample
 def evaluate_ts(current_ts, model):
-    print(current_ts.shape)
-    print(current_ts.columns)
     X = []
     y = []
     current_ts["hour"] = pd.factorize(current_ts["hour"].astype(str).str[:2])[0]
@@ -63,8 +63,6 @@ def evaluate_ts(current_ts, model):
         X.append([row['date'], row['hour']])
         y.append(float(row[-1]))
 
-    print(len(X))
-    print(len(y))
     model.fit(X, y, variable_names=['date', 'hour'])
 
     yhat = model.predict(X)
@@ -137,25 +135,31 @@ list_XTSTree = [
                ]
 
 experiment_log = list()
-for file in list_files[:3]:
+for file in list_files:
     for sep in list_XTSTree:
         #file = "20dias_umidrelmed2m_2015-12-01 _ 2015-12-21.csv"
+        print(file)
         series = pd.read_csv(dir_path+file).dropna()
-        #plot(series.umidrelmed2m, save=True, show=False, img_name="images/"+file+".pdf")
+        plot(series.umidrelmed2m, save=True, show=False, img_name="images/"+file+".pdf")
 
         t = time.perf_counter()
         xtstree = sep.create_splits(series.umidrelmed2m.values)
         t_diff = time.perf_counter() - t
         cuts = xtstree.cut_points()
-        #plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False, img_name="images/"+file+"_splits.pdf")
+        plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False, img_name="images/"+file+"_splits.pdf")
 
         print(cuts)
         for criteria in list_criteria:
+
+            ### WANDB
+            run = wandb.init(project="XTSTree", entity="barbon", reinit=True)
+            ###
+
             model, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0))
 
             experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria]]
-            for idx, cut in enumerate(cuts[:1]):
-                print(idx,len(cuts))
+            for idx, cut in enumerate(cuts):
+                #print(idx,len(cuts))
                 if idx == 0:
                     model, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[0:cut, :].copy(),
                                                                                   get_regressor(criteria, file, cut)) #WARM START?????
@@ -166,9 +170,9 @@ for file in list_files[:3]:
                     model, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:cuts[idx+1], :].copy(),
                                                                                   get_regressor(criteria, file, cut))
                 experiment_log_cuts.append([cut, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE, model.get_best()['equation'], criteria])
-            print(experiment_log_cuts)
+            #print(experiment_log_cuts)
             df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
-            print(df_experiment_log_cuts.shape)
+            #print(df_experiment_log_cuts.shape)
 
             df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE", "Equation", "Criteria"]
             df_experiment_log_cuts.to_csv("logs/"+criteria+"_"+file+"_cuts_log.csv")
@@ -187,6 +191,24 @@ for file in list_files[:3]:
                                    df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),
                                    df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),
                                    ])
+            ### WANDB
+            wandb.log({"file":file,
+                       "XTSTree":type(sep).__name__,
+                       "Cuts": len(cuts),
+                       "Time": t, #time cost
+                       "Criteria": criteria, #parsimonly?
+                       "MAE":raw_MAE,
+                       "MSE":raw_MSE,
+                       "RMSE":raw_RMSE,
+                       "MAPE":raw_MAPE,
+                       "MAE_leaves":df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),
+                       "MSE_leaves":df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),
+                       "RMSE_leaves":df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),
+                       "MAPE_leaves":df_experiment_log_cuts.MAPE.drop([0], axis=0).mean()
+                       })
+            run.finish()
+            ### WANDB
+
 
 df_experiment_log = pd.DataFrame(experiment_log)
 df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "MAE", "MSE", "RMSE", "MAPE",
