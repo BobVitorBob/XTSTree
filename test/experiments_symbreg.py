@@ -108,9 +108,9 @@ def get_regressor(criteria, file, cut):
     return PySRRegressor(
         binary_operators=['+', '-', '*', '/', 'pow'],
         unary_operators=['neg', 'exp', 'abs', 'log', 'sqrt', 'sin', 'tan', 'sinh', 'sign'],
-        niterations=1,
-        populations=15,
-        population_size=15,
+        niterations=200,
+        populations=30,
+        population_size=60,
         progress=False,
         model_selection=criteria,
         equation_file="symbreg_objects/" + criteria + "_" + file + "_" + str(cut) +".csv"
