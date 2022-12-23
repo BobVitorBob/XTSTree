@@ -3,11 +3,7 @@ from plot import plot
 import time
 import pandas as pd
 
-from numpy import asarray
-from pandas import read_csv
-from pandas import DataFrame
-from pandas import concat
-from sklearn.ensemble import RandomForestRegressor
+import sys
 from pysr import *
 
 import numpy as np
@@ -104,11 +100,11 @@ def listing_all_files(PATH):
     return res
 
 
-def get_regressor(criteria, file, cut):
+def get_regressor(criteria, file, cut, iterations):
     return PySRRegressor(
         binary_operators=['+', '-', '*', '/', 'pow'],
         unary_operators=['neg', 'exp', 'abs', 'log', 'sqrt', 'sin', 'tan', 'sinh', 'sign'],
-        niterations=200,
+        niterations=iterations,
         populations=30,
         population_size=60,
         progress=False,
@@ -119,6 +115,9 @@ def get_regressor(criteria, file, cut):
         )
 
 
+param_niterations = 50
+if len(sys.argv) > 1:
+    param_niterations = sys.argv[0]
 
 window_size = 96
 s = 3.2
@@ -154,29 +153,29 @@ for file in list_files:
         for criteria in list_criteria:
 
             ### WANDB
-            run = wandb.init(project="XTSTree", entity="barbon", reinit=True)
+            run = wandb.init(project="XTSTree", entity="barbon", reinit=True, name=file+"_"+type(sep).__name__+"_"+criteria)
             ###
 
-            model, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0))
+            model, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations))
 
-            experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria]]
+            experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria, param_niterations]]
             for idx, cut in enumerate(cuts):
                 #print(idx,len(cuts))
                 if idx == 0:
                     model, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[0:cut, :].copy(),
-                                                                                  get_regressor(criteria, file, cut)) #WARM START?????
+                                                                                  get_regressor(criteria, file, cut, param_niterations)) #WARM START?????
                 elif idx == (len(cuts)-1):
                     model, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:, :].copy(),
-                                                                                  get_regressor(criteria, file, cut))
+                                                                                  get_regressor(criteria, file, cut, param_niterations))
                 else:
                     model, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:cuts[idx+1], :].copy(),
-                                                                                  get_regressor(criteria, file, cut))
+                                                                                  get_regressor(criteria, file, cut, param_niterations))
                 experiment_log_cuts.append([cut, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE, model.get_best()['equation'], criteria])
             #print(experiment_log_cuts)
             df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
             #print(df_experiment_log_cuts.shape)
 
-            df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE", "Equation", "Criteria"]
+            df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE", "Equation", "Criteria", "NumIterations",]
             df_experiment_log_cuts.to_csv("test/logs/"+criteria+"_"+file+"_cuts_log.csv")
 
             experiment_log.append([file,
@@ -184,6 +183,7 @@ for file in list_files:
                                    len(cuts),
                                    t, #time cost
                                    criteria, #parsimonly?
+                                   param_niterations,
                                    raw_MAE,
                                    raw_MSE,
                                    raw_RMSE,
@@ -199,6 +199,7 @@ for file in list_files:
                        "Cuts": len(cuts),
                        "Time": t, #time cost
                        "Criteria": criteria, #parsimonly?
+                       "NumIterations": param_niterations,
                        "MAE":raw_MAE,
                        "MSE":raw_MSE,
                        "RMSE":raw_RMSE,
@@ -213,6 +214,6 @@ for file in list_files:
 
 
 df_experiment_log = pd.DataFrame(experiment_log)
-df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "MAE", "MSE", "RMSE", "MAPE",
+df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "NumIterations", "MAE", "MSE", "RMSE", "MAPE",
                              "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"]
 df_experiment_log.to_csv("test/experiment_log_20.csv")
