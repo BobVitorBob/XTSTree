@@ -130,7 +130,7 @@ def get_regressor(criteria, file, cut, iterations, path):
 #    param_niterations = sys.argv[0]
 
 
-param_path = "temp/"
+param_path = "test/"
 param_niterations = 50
 
 window_size = 96
