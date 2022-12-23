@@ -113,7 +113,9 @@ def get_regressor(criteria, file, cut):
         population_size=60,
         progress=False,
         model_selection=criteria,
-        equation_file="symbreg_objects/" + criteria + "_" + file + "_" + str(cut) +".csv"
+        equation_file="test/symbreg_objects/" + criteria + "_" + file + "_" + str(cut) +".csv",
+        verbosity = 0,
+        temp_equation_file=False
         )
 
 
@@ -125,7 +127,7 @@ max_std = 15
 std = min_std
 adf = 0.05
 
-dir_path = 'datasets/umidrelmed2m/20dias/'
+dir_path = 'test/datasets/umidrelmed2m/20dias/'
 list_files = listing_all_files(dir_path)
 
 list_criteria = ["best", "accuracy"]
@@ -140,13 +142,13 @@ for file in list_files:
         #file = "20dias_umidrelmed2m_2015-12-01 _ 2015-12-21.csv"
         print(file)
         series = pd.read_csv(dir_path+file).dropna()
-        plot(series.umidrelmed2m, save=True, show=False, img_name="images/"+file+".pdf")
+        plot(series.umidrelmed2m, save=True, show=False, img_name="test/images/"+file+".pdf")
 
         t = time.perf_counter()
         xtstree = sep.create_splits(series.umidrelmed2m.values)
         t_diff = time.perf_counter() - t
         cuts = xtstree.cut_points()
-        plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False, img_name="images/"+file+"_splits.pdf")
+        plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False, img_name="test/images/"+file+"_splits.pdf")
 
         print(cuts)
         for criteria in list_criteria:
@@ -175,7 +177,7 @@ for file in list_files:
             #print(df_experiment_log_cuts.shape)
 
             df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE", "Equation", "Criteria"]
-            df_experiment_log_cuts.to_csv("logs/"+criteria+"_"+file+"_cuts_log.csv")
+            df_experiment_log_cuts.to_csv("test/logs/"+criteria+"_"+file+"_cuts_log.csv")
 
             experiment_log.append([file,
                                    type(sep).__name__,
@@ -213,4 +215,4 @@ for file in list_files:
 df_experiment_log = pd.DataFrame(experiment_log)
 df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "MAE", "MSE", "RMSE", "MAPE",
                              "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"]
-df_experiment_log.to_csv("experiment_log_20.csv")
+df_experiment_log.to_csv("test/experiment_log_20.csv")
