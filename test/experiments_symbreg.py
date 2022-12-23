@@ -155,9 +155,9 @@ list_XTSTree = [
                 ]
 
 experiment_log = list()
-for file in list_files[:1]:
+for file in list_files:
     for sep in list_XTSTree:
-        file = "20dias_umidrelmed2m_2015-12-01 _ 2015-12-21.csv"
+        #file = "20dias_umidrelmed2m_2015-12-01 _ 2015-12-21.csv"
         print(file)
         series = pd.read_csv(dir_path+file).dropna()
         plot(series.umidrelmed2m, save=True, show=False, img_name=param_path+"images/"+file+".pdf")
