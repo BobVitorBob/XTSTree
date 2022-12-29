@@ -141,7 +141,7 @@ max_std = 15
 std = min_std
 adf = 0.05
 
-dir_path = param_path+'datasets/umidrelmed2m/20dias/'
+dir_path = param_path+'datasets/umidrelmed2m/60dias/'
 list_files = listing_all_files(dir_path)
 
 list_criteria = ["best", "accuracy"]
@@ -257,4 +257,4 @@ df_experiment_log = pd.DataFrame(experiment_log)
 df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "NumIterations", "time raw", "time leaves",
                              "MAE", "MSE", "RMSE", "MAPE",
                              "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"]
-df_experiment_log.to_csv(param_path+"experiment_log_20.csv")
+df_experiment_log.to_csv(param_path+"experiment_log_60.csv")
