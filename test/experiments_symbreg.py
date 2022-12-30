@@ -132,6 +132,7 @@ def get_regressor(criteria, file, cut, iterations, path):
 
 param_dataset = sys.argv[1] #numero de dias
 
+
 #remover depois
 param_path = "test/"
 param_niterations = 50
@@ -161,7 +162,7 @@ experiment_log = list()
 for rep in range(1, 5):
     for file in list_files:
         for sep in list_XTSTree:
-            #file = "20dias_umidrelmed2m_2015-12-01 _ 2015-12-21.csv"
+            #file = "5dias_umidrelmed2m_2019-06-29 _ 2019-07-04.csv"
             print(file)
             series = pd.read_csv(dir_path+file).dropna()
             plot(series.umidrelmed2m, save=True, show=False, img_name=param_path+"images/"+file+".pdf")
@@ -174,85 +175,88 @@ for rep in range(1, 5):
                  img_name=param_path+"images/"+file+"_rep"+str(rep)+"_splits.pdf")
 
             print("Cuts:", cuts)
-            for criteria in list_criteria:
+            if len(cuts) > 0:
+                for criteria in list_criteria:
 
-                ### WANDB
-                run = wandb.init(project="XTSTree", entity="barbon", reinit=True, name=file+"_"+type(sep).__name__+"_rep"+str(rep)+"_"+criteria)
-                ###
-                t_raw = time.perf_counter()
-                model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations, param_path))
-                t_raw_diff = time.perf_counter() - t_raw
+                    ### WANDB
+                    run = wandb.init(project="XTSTree", entity="barbon", reinit=True, name=file+"_"+type(sep).__name__+"_rep"+str(rep)+"_"+criteria)
+                    ###
+                    t_raw = time.perf_counter()
+                    model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations, param_path))
+                    t_raw_diff = time.perf_counter() - t_raw
 
-                plot(series.umidrelmed2m, save=True, show=False,
-                     img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_reg.pdf", sec_plots=[yhat])
+                    plot(series.umidrelmed2m, save=True, show=False,
+                         img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_reg.pdf", sec_plots=[yhat])
 
-                experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria, param_niterations, t_raw_diff]]
-                plot_cuts = list()
-                for idx, cut in enumerate(cuts):
-                    #print(idx,len(cuts))
-                    t_cut = time.perf_counter()
-                    if idx == 0:
-                        model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[0:cut, :].copy(),
-                                                                                      get_regressor(criteria, file, cut, param_niterations, param_path)) #WARM START?????
-                    elif idx == (len(cuts)-1):
-                        model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:, :].copy(),
-                                                                                      get_regressor(criteria, file, cut, param_niterations, param_path))
-                    else:
-                        model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:cuts[idx+1], :].copy(),
-                                                                                      get_regressor(criteria, file, cut, param_niterations, param_path))
-                    t_cut_diff = time.perf_counter() - t_cut
-                    plot_cuts.append(yhat)
-                    experiment_log_cuts.append([cut, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE,
-                                                model.get_best()['equation'], criteria, param_niterations, t_cut_diff])
-                #print(experiment_log_cuts)
+                    experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria, param_niterations, t_raw_diff]]
+                    plot_cuts = list()
+                    for idx, cut in enumerate(cuts):
+                        #print(idx,len(cuts))
+                        t_cut = time.perf_counter()
+                        if idx == 0:
+                            model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[0:cut, :].copy(),
+                                                                                          get_regressor(criteria, file, cut, param_niterations, param_path)) #WARM START?????
+                        elif idx == (len(cuts)-1):
+                            model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:, :].copy(),
+                                                                                          get_regressor(criteria, file, cut, param_niterations, param_path))
+                        else:
+                            model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:cuts[idx+1], :].copy(),
+                                                                                          get_regressor(criteria, file, cut, param_niterations, param_path))
+                        t_cut_diff = time.perf_counter() - t_cut
+                        plot_cuts.append(yhat)
+                        experiment_log_cuts.append([cut, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE,
+                                                    model.get_best()['equation'], criteria, param_niterations, t_cut_diff])
+                    #print(experiment_log_cuts)
 
-                #print(len(plot_cuts))
-                #print(np.concatenate(plot_cuts).ravel().tolist())
-                plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False,
-                     img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_cuts_reg.pdf", sec_plots=[np.concatenate(plot_cuts).ravel().tolist()])
-                df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
-                #print(df_experiment_log_cuts.shape)
+                    #print(len(plot_cuts))
+                    #print(np.concatenate(plot_cuts).ravel().tolist())
 
-                df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE",
-                                                  "Equation", "Criteria", "NumIterations", "Time"]
-                df_experiment_log_cuts.to_csv(param_path+"logs/"+criteria+"_"+file+"_rep"+str(rep)+"_cuts_log.csv")
+                    plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False,
+                             img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_cuts_reg.pdf", sec_plots=[np.concatenate(plot_cuts).ravel().tolist()])
 
-                experiment_log.append([file,
-                                       type(sep).__name__,
-                                       len(cuts),
-                                       t, #time cost
-                                       criteria, #parsimonly?
-                                       param_niterations,
-                                       t_raw_diff,
-                                       df_experiment_log_cuts.NumIterations.drop([0], axis=0).sum(), #sum of leaves time
-                                       raw_MAE,
-                                       raw_MSE,
-                                       raw_RMSE,
-                                       raw_MAPE,
-                                       round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                                       round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                                       round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                                       round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2),
-                                       ])
-                ### WANDB
-                wandb.log({"file":file,
-                           "XTSTree":type(sep).__name__,
-                           "Cuts": len(cuts),
-                           "Time": t, #time cost
-                           "Criteria": criteria, #parsimonly?
-                           "NumIterations": param_niterations,
-                           "Time raw": t_raw_diff,
-                           "Time Leaves": df_experiment_log_cuts.NumIterations.drop([0], axis=0).sum(),
-                           "MAE":raw_MAE,
-                           "MSE":raw_MSE,
-                           "RMSE":raw_RMSE,
-                           "MAPE":raw_MAPE,
-                           "MAE_leaves":round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                           "MSE_leaves":round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                           "RMSE_leaves":round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                           "MAPE_leaves":round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2)
-                           })
-                run.finish()
+                    df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
+                    #print(df_experiment_log_cuts.shape)
+
+                    df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE",
+                                                      "Equation", "Criteria", "NumIterations", "Time"]
+                    df_experiment_log_cuts.to_csv(param_path+"logs/"+criteria+"_"+file+"_rep"+str(rep)+"_cuts_log.csv")
+
+                    experiment_log.append([file,
+                                           type(sep).__name__,
+                                           len(cuts),
+                                           t, #time cost
+                                           criteria, #parsimonly?
+                                           param_niterations,
+                                           t_raw_diff,
+                                           df_experiment_log_cuts.NumIterations.drop([0], axis=0).sum(), #sum of leaves time
+                                           raw_MAE,
+                                           raw_MSE,
+                                           raw_RMSE,
+                                           raw_MAPE,
+                                           round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
+                                           round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
+                                           round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
+                                           round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2),
+                                           ])
+                    ### WANDB
+                    wandb.log({"file":file,
+                               "XTSTree":type(sep).__name__,
+                               "Cuts": len(cuts),
+                               "Time": t, #time cost
+                               "Criteria": criteria, #parsimonly?
+                               "NumIterations": param_niterations,
+                               "Time raw": t_raw_diff,
+                               "Time Leaves": df_experiment_log_cuts.NumIterations.drop([0], axis=0).sum(),
+                               "MAE":raw_MAE,
+                               "MSE":raw_MSE,
+                               "RMSE":raw_RMSE,
+                               "MAPE":raw_MAPE,
+                               "MAE_leaves":round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
+                               "MSE_leaves":round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
+                               "RMSE_leaves":round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
+                               "MAPE_leaves":round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2)
+                               })
+                    run.finish()
                 ### WANDB
 
 
