@@ -130,7 +130,7 @@ def get_regressor(criteria, file, cut, iterations, path):
 #    param_niterations = sys.argv[0]
 
 
-param_dataset = sys.argv[0]
+param_dataset = sys.argv[1] #numero de dias
 
 #remover depois
 param_path = "test/"
