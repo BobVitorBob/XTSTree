@@ -19,7 +19,7 @@ class XTSTree:
     self.tree = Tree()
   
   def _depth_stop_condition(self, series: Iterable, depth:int):
-    return (self.stop_val - 1) - depth
+    return depth - (self.stop_val - 1)
   
   def _adf_stop_condition(self, series: Iterable, depth=0):
     adf_test = adfuller(series)
@@ -32,7 +32,7 @@ class XTSTree:
 
   # Função recursiva para encontrar os nós e criar a árvore
   def _recursive_tree(self, series: Iterable, params: dict, curr_depth=0):
-    if self.stop_func(series, curr_depth) > 0 or len(series) < (self.min_dist * 2):
+    if self.stop_func(series, curr_depth) >= 0 or len(series) < (self.min_dist * 2):
       return None
     # Achando a posição de corte e pegando os parâmetros da função de corte
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
