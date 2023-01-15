@@ -130,7 +130,7 @@ def get_regressor(criteria, file, cut, iterations, path):
 #    param_niterations = sys.argv[0]
 
 
-param_dataset = sys.argv[1] #numero de dias
+# param_dataset = sys.argv[1] #numero de dias
 
 
 #remover depois
@@ -144,22 +144,22 @@ max_std = 15
 std = min_std
 adf = 0.05
 
-dir_path = param_path+'datasets/umidrelmed2m/'+param_dataset+'/'
+dir_path = param_path+'datasets/umidrelmed2m/5dias/'
 list_files = listing_all_files(dir_path)
 
 list_criteria = ["best", "accuracy"]
 
 list_XTSTree = [
-                #XTSTreePageHinkley(stop_condition='depth', stop_val=3, min_dist=30),
                 XTSTreePageHinkley(stop_condition='adf', stop_val=0.05, min_dist=30),
-                #XTSTreeRandomCut(stop_condition='depth', stop_val=3, min_dist=30),
-                #XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=30),
+                XTSTreePageHinkley(stop_condition='depth', stop_val=3, min_dist=30),
+								XTSTreeRandomCut(stop_condition='depth', stop_val=3, min_dist=30),
+								XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=30),
                 #XTSTreeKSWIN(stop_condition='depth', stop_val=3, min_dist=30),
                 #XTSTreeKSWIN(stop_condition='adf', stop_val=0.05, min_dist=30)
                 ]
 
 experiment_log = list()
-for rep in range(1, 5):
+for rep in range(1):
     for file in list_files:
         for sep in list_XTSTree:
             #file = "5dias_umidrelmed2m_2019-06-29 _ 2019-07-04.csv"
@@ -179,7 +179,7 @@ for rep in range(1, 5):
                 for criteria in list_criteria:
 
                     ### WANDB
-                    run = wandb.init(project="XTSTree", entity="barbon", reinit=True, name=file+"_"+type(sep).__name__+"_rep"+str(rep)+"_"+criteria)
+                    run = wandb.init(project="XTSTree", entity="bob-vitor-bob", reinit=True, name=file+"_"+type(sep).__name__+"_rep"+str(rep)+"_"+criteria)
                     ###
                     t_raw = time.perf_counter()
                     model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations, param_path))
@@ -190,21 +190,14 @@ for rep in range(1, 5):
 
                     experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria, param_niterations, t_raw_diff]]
                     plot_cuts = list()
-                    for idx, cut in enumerate(cuts):
+                    for start, finish in zip([0, *cuts], [*cuts, len(series.umidrelmed2m.values)]):
                         #print(idx,len(cuts))
                         t_cut = time.perf_counter()
-                        if idx == 0:
-                            model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[0:cut, :].copy(),
-                                                                                          get_regressor(criteria, file, cut, param_niterations, param_path)) #WARM START?????
-                        elif idx == (len(cuts)-1):
-                            model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:, :].copy(),
-                                                                                          get_regressor(criteria, file, cut, param_niterations, param_path))
-                        else:
-                            model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[cut:cuts[idx+1], :].copy(),
-                                                                                          get_regressor(criteria, file, cut, param_niterations, param_path))
+                        model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[start:finish, :].copy(),
+                                                                                          get_regressor(criteria, file, finish, param_niterations, param_path))
                         t_cut_diff = time.perf_counter() - t_cut
                         plot_cuts.append(yhat)
-                        experiment_log_cuts.append([cut, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE,
+                        experiment_log_cuts.append([finish, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE,
                                                     model.get_best()['equation'], criteria, param_niterations, t_cut_diff])
                     #print(experiment_log_cuts)
 
@@ -242,7 +235,7 @@ for rep in range(1, 5):
                     wandb.log({"file":file,
                                "XTSTree":type(sep).__name__,
                                "Cuts": len(cuts),
-                               "Time": t, #time cost
+                               "Time": t_diff, #time cost
                                "Criteria": criteria, #parsimonly?
                                "NumIterations": param_niterations,
                                "Time raw": t_raw_diff,
@@ -264,4 +257,4 @@ df_experiment_log = pd.DataFrame(experiment_log)
 df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "NumIterations", "time raw", "time leaves",
                              "MAE", "MSE", "RMSE", "MAPE",
                              "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"]
-df_experiment_log.to_csv(param_path+"experiment_log_"+param_dataset+".csv")
+df_experiment_log.to_csv(param_path+"experiment_log_5dias.csv")
