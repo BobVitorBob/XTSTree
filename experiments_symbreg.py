@@ -131,10 +131,11 @@ def get_regressor(criteria, file, cut, iterations, path):
 
 
 param_dataset = sys.argv[1] #numero de dias
+wandb_project_name = sys.argv[2]
+wandb_entity = sys.argv[3]
 
 
 #remover depois
-wandb_entity='bob-vitor-bob'
 param_path = "test/"
 param_niterations = 50
 
@@ -184,7 +185,7 @@ for rep in range(1, 5):
                 for criteria in list_criteria:
 
                     ### WANDB
-                    run = wandb.init(project="XTSTree", entity=wandb_entity, reinit=True, name=file+"_"+separator_name+"_rep"+str(rep)+"_"+criteria)
+                    run = wandb.init(project=wandb_project_name, entity=wandb_entity, reinit=True, name=file+"_"+separator_name+"_rep"+str(rep)+"_"+criteria)
                     ###
                     t_raw = time.perf_counter()
                     model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations, param_path))
