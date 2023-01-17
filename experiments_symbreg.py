@@ -130,10 +130,11 @@ def get_regressor(criteria, file, cut, iterations, path):
 #    param_niterations = sys.argv[0]
 
 
-# param_dataset = sys.argv[1] #numero de dias
+param_dataset = sys.argv[1] #numero de dias
 
 
 #remover depois
+wandb_entity='bob-vitor-bob'
 param_path = "test/"
 param_niterations = 50
 
@@ -144,31 +145,35 @@ max_std = 15
 std = min_std
 adf = 0.05
 
-dir_path = param_path+'datasets/umidrelmed2m/5dias/'
+dir_path = param_path+f'datasets/umidrelmed2m/{param_dataset}/'
 list_files = listing_all_files(dir_path)
 
 list_criteria = ["best", "accuracy"]
 
 list_XTSTree = [
-                XTSTreePageHinkley(stop_condition='adf', stop_val=0.05, min_dist=30),
-                XTSTreePageHinkley(stop_condition='depth', stop_val=3, min_dist=30),
-								XTSTreeRandomCut(stop_condition='depth', stop_val=3, min_dist=30),
-								XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=30),
+                ['XTSTreePageHinkley_adf', XTSTreePageHinkley(stop_condition='adf', stop_val=0.05, min_dist=30)],
+                ['XTSTreePageHinkley_depth', XTSTreePageHinkley(stop_condition='depth', stop_val=3, min_dist=30)],
+                ['XTSTreeRandomCut_adf', XTSTreeRandomCut(stop_condition='adf', stop_val=0.05, min_dist=30)],
+                ['XTSTreePeriodicCut_adf', XTSTreePeriodicCut(stop_condition='adf', stop_val=0.05, min_dist=30)],
+                ['XTSTreeRandomCut_depth', XTSTreeRandomCut(stop_condition='depth', stop_val=3, min_dist=30)],
+                ['XTSTreePeriodicCut_depth', XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=30)],
                 #XTSTreeKSWIN(stop_condition='depth', stop_val=3, min_dist=30),
                 #XTSTreeKSWIN(stop_condition='adf', stop_val=0.05, min_dist=30)
                 ]
 
 experiment_log = list()
-for rep in range(1):
+for rep in range(1, 5):
     for file in list_files:
         for sep in list_XTSTree:
+            separator = sep[1]
+            separator_name = sep[0]
             #file = "5dias_umidrelmed2m_2019-06-29 _ 2019-07-04.csv"
             print(file)
             series = pd.read_csv(dir_path+file).dropna()
             plot(series.umidrelmed2m, save=True, show=False, img_name=param_path+"images/"+file+".pdf")
 
             t = time.perf_counter()
-            xtstree = sep.create_splits(series.umidrelmed2m.values)
+            xtstree = separator.create_splits(series.umidrelmed2m.values)
             t_diff = time.perf_counter() - t
             cuts = xtstree.cut_points()
             plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False,
@@ -179,7 +184,7 @@ for rep in range(1):
                 for criteria in list_criteria:
 
                     ### WANDB
-                    run = wandb.init(project="XTSTree", entity="bob-vitor-bob", reinit=True, name=file+"_"+type(sep).__name__+"_rep"+str(rep)+"_"+criteria)
+                    run = wandb.init(project="XTSTree", entity=wandb_entity, reinit=True, name=file+"_"+separator_name+"_rep"+str(rep)+"_"+criteria)
                     ###
                     t_raw = time.perf_counter()
                     model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations, param_path))
@@ -215,7 +220,7 @@ for rep in range(1):
                     df_experiment_log_cuts.to_csv(param_path+"logs/"+criteria+"_"+file+"_rep"+str(rep)+"_cuts_log.csv")
 
                     experiment_log.append([file,
-                                           type(sep).__name__,
+                                           separator_name,
                                            len(cuts),
                                            t, #time cost
                                            criteria, #parsimonly?
@@ -233,7 +238,7 @@ for rep in range(1):
                                            ])
                     ### WANDB
                     wandb.log({"file":file,
-                               "XTSTree":type(sep).__name__,
+                               "XTSTree":separator_name,
                                "Cuts": len(cuts),
                                "Time": t_diff, #time cost
                                "Criteria": criteria, #parsimonly?
@@ -257,4 +262,4 @@ df_experiment_log = pd.DataFrame(experiment_log)
 df_experiment_log.columns = ["File", "XTSTree", "Cuts", "Time", "Criteria", "NumIterations", "time raw", "time leaves",
                              "MAE", "MSE", "RMSE", "MAPE",
                              "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"]
-df_experiment_log.to_csv(param_path+"experiment_log_5dias.csv")
+df_experiment_log.to_csv(param_path+f"experiment_log_{param_dataset}.csv")
