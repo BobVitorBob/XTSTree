@@ -11,7 +11,7 @@ class XTSTreePageHinkley(XTSTree):
     self.alpha = alpha
     super().__init__(stop_condition=stop_condition, stop_val=stop_val, max_iter=max_iter, min_dist=min_dist, params={'max_threshold': -1, 'threshold': self.threshold})
 
-  def _find_cut(self, series: Iterable, params: dict):
+  def _find_cut(self, series: Iterable, params: dict, depth=0):
     # Faz uma cópia dos parâmetros porque vai retornar uma cópia dos parâmetros alterados
     # A cópia é feita dentro da função de corte porque pode não precisar alterar os parâmetros dependendo do método de corte
     params = dict(params)
@@ -63,10 +63,10 @@ class XTSTreePageHinkley(XTSTree):
 
     # Se estourar o máximo de iterações, escolhe o ponto que gera mais estacionariedade
     print(f'Não achei um corte, pegando melhor {len(series)}, {threshold}, {n_cuts}')
-    max_stat = -1
-    final_cut = -1
-    for pos in cut_pos:
-      pos_stat = self.stop_func(series[:pos]) + self.stop_func(series[pos:])
+    max_stat = self.stop_func(series[:cut_pos[0]], depth) + self.stop_func(series[cut_pos[0]:], depth)
+    final_cut = cut_pos[0]
+    for pos in cut_pos[1:]:
+      pos_stat = self.stop_func(series[:pos], depth) + self.stop_func(series[pos:], depth)
       if pos_stat > max_stat:
         max_stat = pos_stat
         final_cut = pos

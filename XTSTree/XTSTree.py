@@ -36,7 +36,7 @@ class XTSTree:
       return None
     # Achando a posição de corte e pegando os parâmetros da função de corte
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
-    cut_pos, params = self._find_cut(series=series, params=params)
+    cut_pos, params = self._find_cut(series=series, params=params, depth=curr_depth)
 
     node = TreeNode(cut_pos)
     # Se achou uma posição de corte, corta a série e procura na esquerda e na direita
@@ -48,7 +48,7 @@ class XTSTree:
     return node
     
   # Função que encontra a posição de corte, única para cada método de corte
-  def _find_cut(self, series: Iterable, params: dict) -> Tuple[int, dict]:
+  def _find_cut(self, series: Iterable, params: dict, depth=0) -> Tuple[int, dict]:
     pass
 
   def apply_on_leaves(self, function, series: Iterable) -> List:

@@ -24,7 +24,7 @@ class XTSTreeKSWIN(XTSTree):
     self.window = window
     super().__init__(stop_condition=stop_condition, stop_val=stop_val, max_iter=max_iter, min_dist=min_dist, params={'max_alpha': -1, 'alpha': self.starting_alpha})
 
-  def _find_cut(self, series: Iterable, params: dict):
+  def _find_cut(self, series: Iterable, params: dict, depth=0):
     # Faz uma cópia dos parâmetros porque vai retornar uma cópia dos parâmetros alterados
     # A cópia é feita dentro da função de corte porque pode não precisar alterar os parâmetros dependendo do método de corte
     params = dict(params)
