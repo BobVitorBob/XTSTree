@@ -166,6 +166,7 @@ df_experiment_log = pd.DataFrame(columns=["File", "XTSTree", "Cuts", "Time", "Cr
                              "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"])
 
 df_experiment_log.to_csv(param_path+f"experiment_log_{param_dataset}.csv", index=False)
+
 for rep in range(1, 5):
     for file in list_files:
         for sep in list_XTSTree:
@@ -200,22 +201,47 @@ for rep in range(1, 5):
                   plot(series.umidrelmed2m, save=True, show=False,
                         img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_reg.pdf", sec_plots=[yhat])
 
-                  experiment_log_cuts = [[0, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE, model.get_best()['equation'], criteria, param_niterations, t_raw_diff]]
+                  experiment_log_cuts = [[
+                    0,
+                    raw_MAE,
+                    raw_MSE,
+                    raw_RMSE,
+                    raw_MAPE,
+                    model.get_best()['equation'],
+                    model.get_best()['complexity'],
+                    criteria,
+                    param_niterations,
+                    t_raw_diff
+                  ]]
                   plot_cuts = list()
                   print('Avaliando folhas')
                   for start, finish in zip([0, *cuts], [*cuts, len(series.umidrelmed2m.values)]):
                       #print(idx,len(cuts))
                       t_cut = time.perf_counter()
-                      model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(series.iloc[start:finish, :].copy(),
-                                                                                        get_regressor(criteria, file, finish, param_niterations, param_path))
+                      model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(
+                        series.iloc[start:finish, :].copy(), 
+                        get_regressor(
+                          criteria,
+                          file,
+                          finish,
+                          param_niterations,
+                          param_path
+                        )
+                      )
                       t_cut_diff = time.perf_counter() - t_cut
                       plot_cuts.append(yhat)
-                      experiment_log_cuts.append([finish, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE,
-                                                  model.get_best()['equation'], criteria, param_niterations, t_cut_diff])
-                  print('Terminei as folhas')
-
-                  #print(len(plot_cuts))
-                  #print(np.concatenate(plot_cuts).ravel().tolist())
+                      experiment_log_cuts.append([
+                        finish,
+                        perf_MAE,
+                        perf_MSE,
+                        perf_RMSE,
+                        perf_MAPE,
+                        model.get_best()['equation'],
+                        model.get_best()['complexity'],
+                        criteria,
+                        param_niterations,
+                        t_cut_diff
+                      ])
 
                   plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False,
                             img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_cuts_reg.pdf", sec_plots=[np.concatenate(plot_cuts).ravel().tolist()])
@@ -223,8 +249,18 @@ for rep in range(1, 5):
                   df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
                   #print(df_experiment_log_cuts.shape)
 
-                  df_experiment_log_cuts.columns = ["Start", "MAE", "MSE", "RMSE", "MAPE",
-                                                    "Equation", "Criteria", "NumIterations", "Time"]
+                  df_experiment_log_cuts.columns = [
+                    "Start",
+                    "MAE",
+                    "MSE",
+                    "RMSE",
+                    "MAPE",
+                    "Equation",
+                    "Complexity",
+                    "Criteria",
+                    "NumIterations",
+                    "Time"
+                  ]
                   df_experiment_log_cuts.to_csv(param_path+"logs/"+criteria+"_"+file+"_rep"+str(rep)+"_cuts_log.csv")
                   # Atualiza o dataframe de log do experimento conforme executa para ter o arquivo caso o experimento quebre
                   df_experiment_log = pd.DataFrame([[
