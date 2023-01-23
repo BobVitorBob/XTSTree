@@ -102,7 +102,7 @@ def listing_all_files(PATH):
     return res
 
 
-def get_regressor(criteria, file, cut, iterations, path):
+def get_regressor(criteria, output_file, iterations, path):
     return PySRRegressor(
         binary_operators=['+', '-', '*', '/', 'pow'],
         unary_operators=['neg', 'exp', 'abs', 'log', 'sqrt', 'sin', 'tan', 'sinh', 'sign'],
@@ -111,7 +111,7 @@ def get_regressor(criteria, file, cut, iterations, path):
         population_size=60,
         progress=False,
         model_selection=criteria,
-        equation_file=f'{path}symbreg_objects/{criteria}_{cut}_{file}',
+        equation_file=f'{path}symbreg_objects/{output_file}',
         verbosity = 0,
         temp_equation_file=False
         )
@@ -194,7 +194,7 @@ for rep in range(1, 5):
                 try:
                   print('Avaliando time series inteira')
                   t_raw = time.perf_counter()
-                  model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, file, 0, param_niterations, param_path))
+                  model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, f'{criteria}_{separator_name}_{0}_{file}', param_niterations, param_path))
                   t_raw_diff = time.perf_counter() - t_raw
                   print('Terminei a série inteira')
                   plot(series.umidrelmed2m, save=True, show=False,
@@ -221,8 +221,7 @@ for rep in range(1, 5):
                         series.iloc[start:finish, :].copy(), 
                         get_regressor(
                           criteria,
-                          file,
-                          finish,
+                          f'{criteria}_{separator_name}_{finish}_{file}',
                           param_niterations,
                           param_path
                         )
@@ -310,9 +309,9 @@ for rep in range(1, 5):
                     "MSE_leaves":round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
                     "RMSE_leaves":round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
                     "MAPE_leaves":round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2)
-                  })
+                  })	
                   print(f'{file}-{criteria}-{separator_name} salvo no wandb')
                 except Exception as e:
-                  print('Erro na execução do loop', e)
+                  print(f'Erro no loop, {separator_name}, {criteria}, {file}, {e}')
                 finally:
                   run.finish()
