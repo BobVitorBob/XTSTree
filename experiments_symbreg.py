@@ -272,6 +272,7 @@ for rep in range(1, 5):
                     param_niterations,
                     t_raw_diff,
                     df_experiment_log_cuts.Time.drop([0], axis=0).sum(), #sum of leaves time
+                    model.get_best()['complexity'],
                     raw_MAE,
                     raw_MSE,
                     raw_RMSE,
@@ -288,27 +289,25 @@ for rep in range(1, 5):
                   df_experiment_log.to_csv(param_path+f"experiment_log_{param_dataset}.csv", header=None, mode='a', index=False)
                   print(f'{file}-{criteria}-{separator_name} salvo localmente, subindo para o wandb')
                   ### WANDB
-                  wandb.log({"file":file,
-                              "XTSTree":separator_name,
-                              "Cuts": len(cuts),
-                              "Time": t_diff, #time cost
-                              "Criteria": criteria, #parsimonly?
-                              "NumIterations": param_niterations,
-                              "Time raw": t_raw_diff,
-                              "Time Leaves": df_experiment_log_cuts.Time.drop([0], axis=0).sum(),
-                              "MAE":raw_MAE,
-                              "MSE":raw_MSE,
-                              "RMSE":raw_RMSE,
-                              "MAPE":raw_MAPE,
-                              "MAE_diff":raw_MAE - round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                              "MSE_diff":raw_MSE - round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                              "RMSE_diff":raw_RMSE - round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                              "MAPE_diff":raw_MAPE - round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2),
-                              "MAE_leaves":round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                              "MSE_leaves":round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                              "RMSE_leaves":round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                              "MAPE_leaves":round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2)
-                              })
+                  wandb.log({
+                    "file":file,
+                    "XTSTree":separator_name,
+                    "Cuts": len(cuts),
+                    "Time": t_diff, #time cost
+                    "Criteria": criteria, #parsimonly?
+                    "NumIterations": param_niterations,
+                    "Time raw": t_raw_diff,
+                    "Time Leaves": df_experiment_log_cuts.Time.drop([0], axis=0).sum(),
+                    "Complexity": model.get_best()['complexity'],
+                    "MAE":raw_MAE,
+                    "MSE":raw_MSE,
+                    "RMSE":raw_RMSE,
+                    "MAPE":raw_MAPE,
+                    "MAE_leaves":round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
+                    "MSE_leaves":round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
+                    "RMSE_leaves":round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
+                    "MAPE_leaves":round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2)
+                  })
                   print(f'{file}-{criteria}-{separator_name} salvo no wandb')
                 except Exception as e:
                   print('Erro na execução do loop', e)
