@@ -25,7 +25,14 @@ class XTSTree:
     return depth - (self.stop_val - 1)
   
   def _adf_stop_condition(self, series: Iterable, depth=0):
-    adf_test = adfuller(series)
+    try:
+      adf_test = adfuller(series)
+    except ValueError as e:
+      # Série pequena demais
+      print('Série pequena demais para adf, deve terminar o corte')
+      # Retorna 0 pra parar os cortes e recompensar o mínimo possível a folha
+      return 0
+      
     return adf_test[1] - self.stop_val
   
   # Cria a árvore e acha os splits para uma série
