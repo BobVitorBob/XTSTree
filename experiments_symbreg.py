@@ -84,7 +84,6 @@ def evaluate_ts_lag(current_ts, model, lag):
     model.fit(X, y, variable_names=['date', 'hour', 'lag'])
     arr = []
     arr = model.get_best()['lambda_format'](np.array(X))
-    #plot(arr, sec_plots=[y], divisions=[i for i, x in enumerate(X) if x[0] == 0])
 
     yhat = model.predict(X)
     perf_mae = round(mae(y, yhat),2)
@@ -181,8 +180,8 @@ for rep in range(1, 5):
             xtstree = separator.create_splits(series.umidrelmed2m.values)
             t_diff = time.perf_counter() - t
             cuts = xtstree.cut_points()
-            plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False,
-                 img_name=param_path+"images/"+file+"_rep"+str(rep)+"_splits.pdf")
+            plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {separator_name}', save=True, show=False,
+                 img_name=param_path+"images/"+file+"_rep"+str(rep)+"_method"+separator_name+"_splits.pdf")
 
             print("Cuts:", cuts)
             if len(cuts) == 0:
@@ -199,7 +198,7 @@ for rep in range(1, 5):
                   t_raw_diff = time.perf_counter() - t_raw
                   print('Terminei a série inteira')
                   plot(series.umidrelmed2m, save=True, show=False,
-                        img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_reg.pdf", sec_plots=[yhat])
+                        img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_method"+separator_name+"_reg.pdf", sec_plots=[yhat])
 
                   experiment_log_cuts = [[
                     0,
@@ -243,8 +242,8 @@ for rep in range(1, 5):
                         t_cut_diff
                       ])
 
-                  plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {adf} (ADF)', save=True, show=False,
-                            img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_cuts_reg.pdf", sec_plots=[np.concatenate(plot_cuts).ravel().tolist()])
+                  plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {separator_name}', save=True, show=False,
+                            img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_method"+separator_name+"_cuts_reg.pdf", sec_plots=[np.concatenate(plot_cuts).ravel().tolist()])
 
                   df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
                   #print(df_experiment_log_cuts.shape)
