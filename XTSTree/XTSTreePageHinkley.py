@@ -62,7 +62,10 @@ class XTSTreePageHinkley(XTSTree):
     
 
     # Se estourar o máximo de iterações, escolhe o ponto que gera mais estacionariedade
-    print(f'Não achei um corte, pegando melhor {len(series)}, {threshold}, {n_cuts}')
+    if len(cut_pos) == 0:
+      print(f'Não achei nenhum corte em {self.max_iter} iterações, nó tem que ser folha')
+      return -1, params
+    print(f'Não achei só um corte, escolhendo corte que gera maior pontuação, {len(series)}, {threshold}, {n_cuts}')
     max_stat = self.stop_func(series[:cut_pos[0]], depth) + self.stop_func(series[cut_pos[0]:], depth)
     final_cut = cut_pos[0]
     for pos in cut_pos[1:]:

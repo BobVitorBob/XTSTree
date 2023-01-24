@@ -48,6 +48,10 @@ class XTSTree:
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
     cut_pos, params = self._find_cut(series=series, params=params, depth=curr_depth)
 
+    # Retorna None se ele não achar corte válido, indicando que o nó é folha
+    if cut_pos <= 0:
+      return None
+  
     node = TreeNode(cut_pos)
     # Se achou uma posição de corte, corta a série e procura na esquerda e na direita
     if cut_pos >= 0:
