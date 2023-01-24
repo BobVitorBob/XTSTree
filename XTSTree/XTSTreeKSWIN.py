@@ -9,7 +9,7 @@ class XTSTreeKSWIN(XTSTree):
                stop_condition: str='depth',
                stop_val=2,
                max_iter=1000,
-               min_dist:int=30,
+               min_dist:int=0,
               # Parâmetros KSWIN
                starting_alpha:float=0.005,
                window_size:int=100,

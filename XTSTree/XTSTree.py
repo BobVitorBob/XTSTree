@@ -5,7 +5,7 @@ from statsmodels.tsa.stattools import adfuller
 
 class XTSTree:
   
-  def __init__(self, stop_condition:str='depth', stop_val=3, max_iter=1000, min_dist=50, params:dict={}):
+  def __init__(self, stop_condition:str='depth', stop_val=3, max_iter=1000, min_dist=0, params:dict={}):
     if stop_condition == 'depth':
       self.stop_func=self._depth_stop_condition
     elif stop_condition == 'adf':

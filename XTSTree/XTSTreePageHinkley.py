@@ -4,7 +4,7 @@ from river.drift import PageHinkley
 
 class XTSTreePageHinkley(XTSTree):
   
-  def __init__(self, stop_condition: str='depth', stop_val=2, max_iter=1000, min_dist:int=30, min_instances: int=30, delta: float=0.005, starting_threshold: float=50.0, alpha: float=1 - 0.0001):
+  def __init__(self, stop_condition: str='depth', stop_val=2, max_iter=1000, min_dist:int=0, min_instances: int=30, delta: float=0.005, starting_threshold: float=50.0, alpha: float=1 - 0.0001):
     self.min_instances = min_instances
     self.delta = delta
     self.threshold = starting_threshold
