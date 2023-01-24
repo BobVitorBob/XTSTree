@@ -14,7 +14,10 @@ class XTSTree:
       raise ValueError(f'Stop condition {stop_condition} not supported')
     self.stop_val = stop_val
     self.max_iter = max_iter
-    self.min_dist = min_dist
+    if min_dist <= 0:
+      self.min_dist = 1
+    else:
+      self.min_dist = min_dist
     self.params = params
     self.tree = Tree()
   
