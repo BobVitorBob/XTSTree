@@ -138,12 +138,13 @@ list_files = listing_all_files(dir_path)
 list_criteria = ["best", "accuracy"]
 
 list_XTSTree = [
-                ['PageHinkley_adf', XTSTreePageHinkley(stop_condition='adf', stop_val=0.05, min_dist=0)],
-                ['PageHinkley_depth', XTSTreePageHinkley(stop_condition='depth', stop_val=3, min_dist=0)],
-                ['RandomCut_adf', XTSTreeRandomCut(stop_condition='adf', stop_val=0.05, min_dist=0)],
-                ['RandomCut_depth', XTSTreeRandomCut(stop_condition='depth', stop_val=3, min_dist=0)],
-                ['PeriodicCut_adf', XTSTreePeriodicCut(stop_condition='adf', stop_val=0.05, min_dist=0)],
-                ['PeriodicCut_depth', XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=0)],
+                # ['PageHinkley_adf', XTSTreePageHinkley(stop_condition='adf', stop_val=0.05, min_dist=0)],
+                ['KSWIN_adf', XTSTreeKSWIN(stop_condition='adf', stop_val=0.05, min_dist=0)],
+                # ['PageHinkley_depth', XTSTreePageHinkley(stop_condition='depth', stop_val=3, min_dist=0)],
+                # ['RandomCut_adf', XTSTreeRandomCut(stop_condition='adf', stop_val=0.05, min_dist=0)],
+                # ['RandomCut_depth', XTSTreeRandomCut(stop_condition='depth', stop_val=3, min_dist=0)],
+                # ['PeriodicCut_adf', XTSTreePeriodicCut(stop_condition='adf', stop_val=0.05, min_dist=0)],
+                # ['PeriodicCut_depth', XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=0)],
                 ]
 
 df_experiment_log = pd.DataFrame(

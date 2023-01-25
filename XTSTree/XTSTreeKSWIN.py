@@ -1,5 +1,6 @@
 from XTSTree.XTSTree import XTSTree
 from collections.abc import Iterable
+import numpy as np
 from river.drift import KSWIN
 
 class XTSTreeKSWIN(XTSTree):
