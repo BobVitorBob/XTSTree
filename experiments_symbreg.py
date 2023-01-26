@@ -70,7 +70,7 @@ def evaluate_ts(current_ts, model):
     perf_rmse = round(rmse(y, yhat),2)
     perf_mape = round(mape(y, yhat),2)
 
-    return model, model.get_best()['lambda_format'](np.array(X)), perf_mae, perf_mse, perf_rmse, perf_mape
+    return model, model.get_best()['lambda_format'](np.array(X)), perf_mae, perf_mse, perf_rmse, perf_mape, model.get_best()['complexity']
 
 def evaluate_ts_lag(current_ts, model, lag):
     X = []
@@ -116,19 +116,6 @@ def get_regressor(criteria, output_file, iterations, path):
         temp_equation_file=False
         )
 
-#param_niterations = 50
-
-#if len(sys.argv) == 0:
-#    print("-"*60)
-#    print("Parameters: ")
-#    print("- 1) path (ex. test/)")
-#    print("- 2) Number Iterations Sym. Regression (default 50/)")
-#else:
-#    param_path = sys.argv[1]
-    #param_path = ""
-#    param_niterations = sys.argv[0]
-
-
 param_dataset = sys.argv[1] #numero de dias
 wandb_project_name = sys.argv[2]
 wandb_entity = sys.argv[3]
@@ -136,7 +123,7 @@ wandb_entity = sys.argv[3]
 
 #remover depois
 param_path = "./test/"
-param_niterations = 50
+param_niterations = 20
 
 window_size = 96
 s = 3.2
@@ -159,10 +146,74 @@ list_XTSTree = [
                 ['PeriodicCut_depth', XTSTreePeriodicCut(stop_condition='depth', stop_val=3, min_dist=0)],
                 ]
 
-df_experiment_log = pd.DataFrame(columns=["File", "XTSTree", "Cuts", "Time", "Criteria", "NumIterations", "time raw", "time leaves",
-                             "MAE", "MSE", "RMSE", "MAPE",
-                             "MAE_diff", "MSE_diff", "RMSE_diff", "MAPE_diff",
-                             "Mean_Leaf_MAE", "Mean_Leaf_MSE", "Mean_Leaf_RMSE", "Mean_Leaf_MAPE"])
+df_experiment_log = pd.DataFrame(
+  columns=[
+		# Exp info
+  	"File",
+		"XTSTree",
+		"Criteria",
+		"NumIterations",
+
+		# Series Metrics
+		"Time Raw Series",
+  	"MAE Series",
+		"MSE Series",
+		"RMSE Series",
+		"MAPE Series",
+		"Complexity Series",
+
+		# Comparative Metrics
+  	"MAE_diff",
+		"MSE_diff",
+		"RMSE_diff",
+		"MAPE_diff",
+		"Complexity_diff",
+
+		# XTSTree Metrics
+		"Cuts",
+		"XTSTree Cut Time",
+
+  	# Time
+		"Mean_Leaf_Time",
+		"Std_Leaf_Time",
+		"Min_Leaf_Time",
+		"Max_Leaf_Time",
+		"Sum_Leaf_Time",
+
+		# SR Error
+  	"Mean_Leaf_MAE",
+		"Mean_Leaf_MSE",
+		"Mean_Leaf_RMSE",
+		"Mean_Leaf_MAPE",
+
+  	"Std_Leaf_MAE",
+		"Std_Leaf_MSE",
+		"Std_Leaf_RMSE",
+		"Std_Leaf_MAPE",
+
+  	"Min_Leaf_MAE",
+		"Min_Leaf_MSE",
+		"Min_Leaf_RMSE",
+		"Min_Leaf_MAPE",
+
+		"Max_Leaf_MAE",
+		"Max_Leaf_MSE",
+		"Max_Leaf_RMSE",
+		"Max_Leaf_MAPE",
+
+  	"Sum_Leaf_MAE",
+		"Sum_Leaf_MSE",
+		"Sum_Leaf_RMSE",
+		"Sum_Leaf_MAPE",
+
+		# Complexity
+		"Mean_Leaf_Complexity",
+  	"Std_Leaf_Complexity",
+  	"Min_Leaf_Complexity",
+  	"Max_Leaf_Complexity",
+		"Sum_Leaf_Complexity",
+  ]
+)
 
 df_experiment_log.to_csv(param_path+f"experiment_log_{param_dataset}.csv", index=False)
 
@@ -172,21 +223,21 @@ for rep in range(1, 5):
             separator_name = sep[0]
             separator = sep[1]
 
-            print(file)
+            print('Arquivo', file)
             series = pd.read_csv(dir_path+file).dropna()
             plot(series.umidrelmed2m, save=True, show=False, img_name=param_path+"images/"+file+".pdf")
 
             t = time.perf_counter()
             xtstree = separator.create_splits(series.umidrelmed2m.values)
-            t_diff = time.perf_counter() - t
+            t_split = time.perf_counter() - t
             cuts = xtstree.cut_points()
             plot(series.umidrelmed2m, divisions=cuts, title=f'Segments with {separator_name}', save=True, show=False,
                  img_name=param_path+"images/"+file+"_rep"+str(rep)+"_method"+separator_name+"_splits.pdf")
 
-            print("Cuts:", cuts)
             if len(cuts) == 0:
                 print('0 cortes')
                 continue
+            print("Cuts:", cuts)
             for criteria in list_criteria:
 
                 ### WANDB
@@ -194,30 +245,30 @@ for rep in range(1, 5):
                 try:
                   print('Avaliando time series inteira')
                   t_raw = time.perf_counter()
-                  model, yhat, raw_MAE, raw_MSE, raw_RMSE, raw_MAPE = evaluate_ts(series, get_regressor(criteria, f'{criteria}_{separator_name}_{0}_{file}', param_niterations, param_path))
-                  t_raw_diff = time.perf_counter() - t_raw
+                  model, yhat, series_MAE, series_MSE, series_RMSE, series_MAPE, series_complexity = evaluate_ts(series, get_regressor(criteria, f'{criteria}_{separator_name}_{0}_{file}', param_niterations, param_path))
+                  t_series = time.perf_counter() - t_raw
                   print('Terminei a série inteira')
                   plot(series.umidrelmed2m, save=True, show=False,
                         img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_method"+separator_name+"_reg.pdf", sec_plots=[yhat])
 
                   experiment_log_cuts = [[
                     0,
-                    raw_MAE,
-                    raw_MSE,
-                    raw_RMSE,
-                    raw_MAPE,
+                    series_MAE,
+                    series_MSE,
+                    series_RMSE,
+                    series_MAPE,
                     model.get_best()['equation'],
-                    model.get_best()['complexity'],
+                    series_complexity,
                     criteria,
                     param_niterations,
-                    t_raw_diff
+                    t_series
                   ]]
                   plot_cuts = list()
                   print('Avaliando folhas')
                   for start, finish in zip([0, *cuts], [*cuts, len(series.umidrelmed2m.values)]):
                       #print(idx,len(cuts))
                       t_cut = time.perf_counter()
-                      model, yhat, perf_MAE, perf_MSE, perf_RMSE, perf_MAPE = evaluate_ts(
+                      model, yhat, leaf_MAE, leaf_MSE, leaf_RMSE, leaf_MAPE, leaf_complexity = evaluate_ts(
                         series.iloc[start:finish, :].copy(), 
                         get_regressor(
                           criteria,
@@ -230,12 +281,12 @@ for rep in range(1, 5):
                       plot_cuts.append(yhat)
                       experiment_log_cuts.append([
                         finish,
-                        perf_MAE,
-                        perf_MSE,
-                        perf_RMSE,
-                        perf_MAPE,
+                        leaf_MAE,
+                        leaf_MSE,
+                        leaf_RMSE,
+                        leaf_MAPE,
                         model.get_best()['equation'],
-                        model.get_best()['complexity'],
+                        leaf_complexity,
                         criteria,
                         param_niterations,
                         t_cut_diff
@@ -245,7 +296,6 @@ for rep in range(1, 5):
                             img_name=param_path + "images/" + file + "_splits_"+criteria+"_rep"+str(rep)+"_method"+separator_name+"_cuts_reg.pdf", sec_plots=[np.concatenate(plot_cuts).ravel().tolist()])
 
                   df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
-                  #print(df_experiment_log_cuts.shape)
 
                   df_experiment_log_cuts.columns = [
                     "Start",
@@ -260,55 +310,135 @@ for rep in range(1, 5):
                     "Time"
                   ]
                   df_experiment_log_cuts.to_csv(param_path+"logs/"+criteria+"_"+file+"_rep"+str(rep)+"_cuts_log.csv")
+                  df_experiment_log_cuts = df_experiment_log_cuts.drop([0], axis=0)
                   # Atualiza o dataframe de log do experimento conforme executa para ter o arquivo caso o experimento quebre
                   df_experiment_log = pd.DataFrame([[
                     file,
                     separator_name,
-                    len(cuts),
-                    t, #time cost
-                    criteria, #parsimonly?
+                    criteria,
                     param_niterations,
-                    t_raw_diff,
-                    df_experiment_log_cuts.Time.drop([0], axis=0).sum(), #sum of leaves time
-                    model.get_best()['complexity'],
-                    raw_MAE,
-                    raw_MSE,
-                    raw_RMSE,
-                    raw_MAPE,
-                    raw_MAE - round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                    raw_MSE - round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                    raw_RMSE - round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                    raw_MAPE - round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2),
-                    round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                    round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                    round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                    round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2),
+                    
+                    t_series,
+										series_MAE,
+										series_MSE,
+										series_RMSE,
+										series_MAPE,
+										series_complexity,
+										
+          					series_MAE - round(df_experiment_log_cuts.MAE.mean(),2),
+										series_MSE - round(df_experiment_log_cuts.MSE.mean(),2),
+										series_RMSE - round(df_experiment_log_cuts.RMSE.mean(),2),
+										series_MAPE - round(df_experiment_log_cuts.MAPE.mean(),2),
+										series_complexity - df_experiment_log_cuts.Complexity,
+										
+          					len(cuts),
+          					t_split,
+
+										round(df_experiment_log_cuts.Time.mean(),2),
+										round(df_experiment_log_cuts.Time.std(),2),
+          					df_experiment_log_cuts.Time.min(),
+          					df_experiment_log_cuts.Time.max(),
+          					df_experiment_log_cuts.Time.sum(),
+               
+										round(df_experiment_log_cuts.MAE.mean(),2),
+										round(df_experiment_log_cuts.MSE.mean(),2),
+										round(df_experiment_log_cuts.RMSE.mean(),2),
+										round(df_experiment_log_cuts.MAPE.mean(),2),
+
+										round(df_experiment_log_cuts.MAE.std(),2),
+										round(df_experiment_log_cuts.MSE.std(),2),
+										round(df_experiment_log_cuts.RMSE.std(),2),
+										round(df_experiment_log_cuts.MAPE.std(),2),
+
+										df_experiment_log_cuts.MAE.min(),
+										df_experiment_log_cuts.MSE.min(),
+										df_experiment_log_cuts.RMSE.min(),
+										df_experiment_log_cuts.MAPE.min(),
+
+										df_experiment_log_cuts.MAE.max(),
+										df_experiment_log_cuts.MSE.max(),
+										df_experiment_log_cuts.RMSE.max(),
+										df_experiment_log_cuts.MAPE.max(),
+
+										df_experiment_log_cuts.MAE.sum(),
+										df_experiment_log_cuts.MSE.sum(),
+										df_experiment_log_cuts.RMSE.sum(),
+										df_experiment_log_cuts.MAPE.sum(),
+	
+										round(df_experiment_log_cuts.Complexity.mean(),2),
+										round(df_experiment_log_cuts.Complexity.std(),2),
+          					df_experiment_log_cuts.Complexity.min(),
+          					df_experiment_log_cuts.Complexity.max(),
+          					df_experiment_log_cuts.Complexity.sum(),
                   ]])
                   df_experiment_log.to_csv(param_path+f"experiment_log_{param_dataset}.csv", header=None, mode='a', index=False)
                   print(f'{file}-{criteria}-{separator_name} salvo localmente, subindo para o wandb')
                   ### WANDB
                   wandb.log({
-                    "file":file,
-                    "XTSTree":separator_name,
-                    "Cuts": len(cuts),
-                    "Time": t_diff, #time cost
-                    "Criteria": criteria, #parsimonly?
-                    "NumIterations": param_niterations,
-                    "Time raw": t_raw_diff,
-                    "Time Leaves": df_experiment_log_cuts.Time.drop([0], axis=0).sum(),
-                    "Complexity": model.get_best()['complexity'],
-                    "MAE":raw_MAE,
-                    "MSE":raw_MSE,
-                    "RMSE":raw_RMSE,
-                    "MAPE":raw_MAPE,
-										"MAE_diff":raw_MAE - round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                    "MSE_diff":raw_MSE - round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                    "RMSE_diff":raw_RMSE - round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                    "MAPE_diff":raw_MAPE - round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2),
-                    "MAE_leaves":round(df_experiment_log_cuts.MAE.drop([0], axis=0).mean(),2),
-                    "MSE_leaves":round(df_experiment_log_cuts.MSE.drop([0], axis=0).mean(),2),
-                    "RMSE_leaves":round(df_experiment_log_cuts.RMSE.drop([0], axis=0).mean(),2),
-                    "MAPE_leaves":round(df_experiment_log_cuts.MAPE.drop([0], axis=0).mean(),2)
+										# Exp info
+										"File": file,
+										"XTSTree": separator_name,
+										"Criteria": criteria,
+										"NumIterations": param_niterations,
+
+										# Series Metrics
+										"Time Raw Series": t_series,
+										"MAE Series": series_MAE,
+										"MSE Series": series_MSE,
+										"RMSE Series": series_RMSE,
+										"MAPE Series": series_MAPE,
+										"Complexity Series": series_complexity,
+
+										# Comparative Metrics
+										"MAE_diff": series_MAE - round(df_experiment_log_cuts.MAE.mean(),2),
+										"MSE_diff": series_MSE - round(df_experiment_log_cuts.MSE.mean(),2),
+										"RMSE_diff": series_RMSE - round(df_experiment_log_cuts.RMSE.mean(),2),
+										"MAPE_diff": series_MAPE - round(df_experiment_log_cuts.MAPE.mean(),2),
+										"Complexity_diff": series_complexity - df_experiment_log_cuts.Complexity.mean(),
+
+										# XTSTree Metrics
+										"Cuts": len(cuts),
+										"XTSTree Cut Time": t_split,
+
+										# Time
+										"Mean_Leaf_Time": round(df_experiment_log_cuts.Time.mean(),2),
+										"Std_Leaf_Time": round(df_experiment_log_cuts.Time.std(),2),
+										"Min_Leaf_Time": df_experiment_log_cuts.Time.min(),
+										"Max_Leaf_Time": df_experiment_log_cuts.Time.max(),
+										"Sum_Leaf_Time": df_experiment_log_cuts.Time.sum(),
+
+										# SR Error
+										"Mean_Leaf_MAE": round(df_experiment_log_cuts.MAE.mean(),2),
+										"Mean_Leaf_MSE": round(df_experiment_log_cuts.MSE.mean(),2),
+										"Mean_Leaf_RMSE": round(df_experiment_log_cuts.RMSE.mean(),2),
+										"Mean_Leaf_MAPE": round(df_experiment_log_cuts.MAPE.mean(),2),
+
+										"Std_Leaf_MAE": round(df_experiment_log_cuts.MAE.std(),2),
+										"Std_Leaf_MSE": round(df_experiment_log_cuts.MSE.std(),2),
+										"Std_Leaf_RMSE": round(df_experiment_log_cuts.RMSE.std(),2),
+										"Std_Leaf_MAPE": round(df_experiment_log_cuts.MAPE.std(),2),
+
+										"Min_Leaf_MAE": df_experiment_log_cuts.MAE.min(),
+										"Min_Leaf_MSE": df_experiment_log_cuts.MSE.min(),
+										"Min_Leaf_RMSE": df_experiment_log_cuts.RMSE.min(),
+										"Min_Leaf_MAPE": df_experiment_log_cuts.MAPE.min(),
+
+										"Max_Leaf_MAE": df_experiment_log_cuts.MAE.max(),
+										"Max_Leaf_MSE": df_experiment_log_cuts.MSE.max(),
+										"Max_Leaf_RMSE": df_experiment_log_cuts.RMSE.max(),
+										"Max_Leaf_MAPE": df_experiment_log_cuts.MAPE.max(),
+
+										"Sum_Leaf_MAE": df_experiment_log_cuts.MAE.sum(),
+										"Sum_Leaf_MSE": df_experiment_log_cuts.MSE.sum(),
+										"Sum_Leaf_RMSE": df_experiment_log_cuts.RMSE.sum(),
+										"Sum_Leaf_MAPE": df_experiment_log_cuts.MAPE.sum(),
+
+										# Complexity
+										"Mean_Leaf_Complexity": round(df_experiment_log_cuts.Complexity.mean(),2),
+										"Std_Leaf_Complexity": round(df_experiment_log_cuts.Complexity.std(),2),
+										"Min_Leaf_Complexity": df_experiment_log_cuts.Complexity.min(),
+										"Max_Leaf_Complexity": df_experiment_log_cuts.Complexity.max(),
+										"Sum_Leaf_Complexity": df_experiment_log_cuts.Complexity.sum(),
                   })	
                   print(f'{file}-{criteria}-{separator_name} salvo no wandb')
                 except Exception as e:
