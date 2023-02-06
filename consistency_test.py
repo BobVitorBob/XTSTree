@@ -162,7 +162,7 @@ list_criteria = ["best"]
 # SR params
 sr_params = []
 for n_pop in [10, 20, 30]:
-  for pop_s in [10, 20, 40, 60]:
+  for pop_s in [20, 40, 60]:
     for n_iter in [5, 10, 20]:
       sr_params.append([n_pop, pop_s, n_iter])
 
@@ -264,7 +264,7 @@ df_experiment_log.to_csv(param_path+f"experiment_log_consistency.csv", index=Fal
 
 for rep in range(1, 5):
   for file in list_files:
-    re_result = re.search(r'.*([0-9]+dias)_umidrelmed2m_(.*).csv', file)
+    re_result = re.search(r'.*/(5dias|10dias|15dias|20dias|60dias|anual)_umidrelmed2m_(.*).csv', file)
     file_name = f'{re_result.group(1)}_{re_result.group(2)}'
     series = pd.read_csv('./test/'+file).dropna()
     plot(series.umidrelmed2m, save=True, show=False, img_name=param_path+"images/"+file_name+".pdf")

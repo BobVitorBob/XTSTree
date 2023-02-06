@@ -185,7 +185,7 @@ print([t[0] for t in list_XTSTree])
 # Infos logadas
 
 for file in list_files:
-  re_result = re.search(r'.*([0-9]+dias)_umidrelmed2m_(.*).csv', file)
+  re_result = re.search(r'.*/(5dias|10dias|15dias|20dias|60dias|anual)_umidrelmed2m_(.*).csv', file)
   file_name = f'{re_result.group(1)}_{re_result.group(2)}'
   series = pd.read_csv('./test/'+file).dropna()
   plot(series.umidrelmed2m, save=True, show=False, img_name=f'{param_path}/images/{file_name}_id{run_id}.pdf')
