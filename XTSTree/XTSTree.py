@@ -14,10 +14,7 @@ class XTSTree:
       raise ValueError(f'Stop condition {stop_condition} not supported')
     self.stop_val = stop_val
     self.max_iter = max_iter
-    if min_dist <= 0:
-      self.min_dist = 1
-    else:
-      self.min_dist = min_dist
+    self.min_dist = max(min_dist, 0)
     self.params = params
     self.tree = Tree()
   
@@ -46,17 +43,15 @@ class XTSTree:
       return None
     # Achando a posição de corte e pegando os parâmetros da função de corte
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
-    cut_pos, params = self._find_cut(series=series, params=params, depth=curr_depth)
+    cut_pos, params, heat_map_increase, heat_map_decrease = self._find_cut(series=series, params=params, depth=curr_depth)
 
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
     if cut_pos <= 0:
       return None
-  
-    node = TreeNode(cut_pos)
-    # Se achou uma posição de corte, corta a série e procura na esquerda e na direita
-    if cut_pos >= 0:
-      node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
-      node.right = self._recursive_tree(series[cut_pos:], params=params, curr_depth=curr_depth+1)
+
+    node = TreeNode({'cut_pos': cut_pos, 'hm_inc': heat_map_increase, 'hm_dec': heat_map_decrease})
+    node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
+    node.right = self._recursive_tree(series[cut_pos:], params=params, curr_depth=curr_depth+1)
       
     # Retorna o nó
     return node
@@ -70,6 +65,28 @@ class XTSTree:
 
   def to_list(self) -> List:
     return self.tree.to_list()
+
+  def get_heatmap(self) -> Tuple[List, List]:
+    heatmap = XTSTree._get_heatmap(self.tree.root)
+    min_hm = min(heatmap)
+    max_hm = max(heatmap)
+    return [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]
+    # return heatmap
+  
+  @staticmethod
+  def _get_heatmap(node: TreeNode, par_heatmap: List=[]) -> Tuple[List, List]:
+    if node == None:
+      return par_heatmap
+
+    if len(par_heatmap) == 0:
+      par_heatmap = node.cont['hm_inc']
+
+    heatmap = [min(inc, dec, par) for inc, dec, par in zip(node.cont['hm_inc'], node.cont['hm_dec'], par_heatmap)]
+    l_heatmap = XTSTree._get_heatmap(node.left, heatmap[:node.cont['cut_pos']])
+    r_heatmap = XTSTree._get_heatmap(node.right, heatmap[node.cont['cut_pos']:])
+
+    return l_heatmap + r_heatmap
+    
 
   def cut_series(self, series: Iterable):
     return XTSTree._get_cuts(self.tree.root, series)
@@ -90,7 +107,34 @@ class XTSTree:
 
   def get_items_by_depth(self):
     return XTSTree._get_items_by_depth(node=self.tree.root, depth=0)
+    
+  def get_cuts_by_depth(self):
+    return XTSTree._get_cuts_by_depth(node=self.tree.root, depth=0)
   
+  def __repr__(self):
+    return self.summary()
+  
+  def summary(self):
+    return XTSTree._get_items_by_depth_side(self.tree.root, depth=0, side_prefix='Root')
+
+  @staticmethod
+  def _get_cuts_by_depth(node: TreeNode, depth: int):
+    if node is None:
+      return {}
+    items_dict = {depth: [node.cont['cut_pos']]}
+    for key, val in XTSTree._get_cuts_by_depth(node=node.left, depth=depth + 1).items():
+      if key in items_dict:
+        items_dict[key] += val
+      else:
+        items_dict[key] = val
+    for key, val in XTSTree._get_cuts_by_depth(node=node.right, depth=depth + 1).items():
+      if key in items_dict:
+        items_dict[key] += [item + node.cont['cut_pos'] for item in val]
+      else:
+        items_dict[key] = [item + node.cont['cut_pos'] for item in val]
+    
+    return items_dict
+
   @staticmethod
   def _get_items_by_depth(node: TreeNode, depth: int):
     if node is None:
@@ -102,24 +146,20 @@ class XTSTree:
       else:
         items_dict[key] = val
     for key, val in XTSTree._get_items_by_depth(node=node.right, depth=depth + 1).items():
+      for item in val:
+        item['cut_pos'] += node.cont['cut_pos']
       if key in items_dict:
-        items_dict[key] += [item + node.cont for item in val]
+        items_dict[key] += val
       else:
-        items_dict[key] = [item + node.cont for item in val]
+        items_dict[key] = val
     
     return items_dict
-  
-  def __repr__(self):
-    return self.summary()
-  
-  def summary(self):
-    return XTSTree._get_items_by_depth_side(self.tree.root, depth=0, side_prefix='Root')
   
   @staticmethod
   def _get_items_by_depth_side(node: TreeNode, depth: int, side_prefix='Root'):
     if node is None:
       return {}
-    items_dict = {depth: [{side_prefix: node.cont}]}
+    items_dict = {depth: [{side_prefix: node.cont['cut_pos']}]}
     if side_prefix == 'Root':
       side_prefix = ''
     for key, val in XTSTree._get_items_by_depth_side(node=node.left, depth=depth + 1, side_prefix=side_prefix+'L').items():
@@ -129,9 +169,9 @@ class XTSTree:
         items_dict[key] = val
     for key, val in XTSTree._get_items_by_depth_side(node=node.right, depth=depth + 1, side_prefix=side_prefix+'R').items():
       if key in items_dict:
-        items_dict[key] += [{side: cut+node.cont} for item in val for side, cut in item.items()]
+        items_dict[key] += [{side: cut+node.cont['cut_pos']} for item in val for side, cut in item.items()]
       else:
-        items_dict[key] = [{side: cut+node.cont} for item in val for side, cut in item.items()]
+        items_dict[key] = [{side: cut+node.cont['cut_pos']} for item in val for side, cut in item.items()]
     
     return items_dict
 
@@ -139,10 +179,10 @@ class XTSTree:
   def _get_cuts(node: TreeNode, series: Iterable):
     if node is None:
       return [series]
-    return [*XTSTree._get_cuts(node.left, series[:node.cont]), *XTSTree._get_cuts(node.right, series[node.cont:])]
+    return [*XTSTree._get_cuts(node.left, series[:node.cont['cut_pos']]), *XTSTree._get_cuts(node.right, series[node.cont['cut_pos']:])]
 
   @staticmethod
   def _get_cut_points(node: TreeNode) -> List:
     if node is None:
       return []
-    return [*XTSTree._get_cut_points(node.left), node.cont, *[cut + node.cont for cut in XTSTree._get_cut_points(node.right)]]
+    return [*XTSTree._get_cut_points(node.left), node.cont['cut_pos'], *[cut + node.cont['cut_pos'] for cut in XTSTree._get_cut_points(node.right)]]
