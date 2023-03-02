@@ -505,7 +505,7 @@ for rep in range(1, 5):
                 "Min_Leaf_Complexity": df_experiment_log_cuts.Complexity.min(),
                 "Max_Leaf_Complexity": df_experiment_log_cuts.Complexity.max(),
                 "Sum_Leaf_Complexity": df_experiment_log_cuts.Complexity.sum(),
-              })	
+              })
               print(f'{run_name} salvo no wandb')
             except Exception as e:
               print(f'Erro no loop, {run_name} erro: {e}')
