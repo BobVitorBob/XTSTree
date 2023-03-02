@@ -23,28 +23,34 @@ class XTSTreePageHinkley(XTSTree):
     for n_iter in range(self.max_iter):
       # Pra reforçar a distância mínima entre cortes, o número de instâncias mínimas até detectar mudança é colocado como a distância mínima, e a série é analisada até os último min_dist elementos.
       ph = PageHinkley(min_instances=self.min_instances, delta=self.delta, threshold=threshold)
+      heat_map_increase = []
+      heat_map_decrease = []
       cut_pos = []
-      for i, val in enumerate(series[:-self.min_dist]):
+      # Rever funcionamento do min_dist junto dos heatmaps
+      for i, val in enumerate(series):
         ph.update(val)
+        heat_map_increase_step = ph._sum_increase - ph._min_increase
+        heat_map_decrease_step = ph._max_decrease - ph._sum_decrease
+        heat_map_increase.append(threshold - heat_map_increase_step)
+        heat_map_decrease.append(threshold - heat_map_decrease_step)
         if ph.drift_detected:
           cut_pos.append(i)
-          # Se detectou mais de um corte, então tem que aumentar o threshold
-          if len(cut_pos) > 1:
-            # Atualiza o threshold mínimo
-            min_threshold = threshold
-            # E faz a busca binária do threshold
-            # Se for menor que 0 é porque não foi definido, então aumenta o threshold em 50%
-            if max_threshold < 0:
-              threshold += threshold/2
-            else:
-              threshold += (max_threshold - threshold)/2
-            break
       n_cuts = len(cut_pos)
-      if n_cuts == 1:
+      # Se detectou mais de um corte, então tem que aumentar o threshold
+      if n_cuts > 1:
+        # Atualiza o threshold mínimo
+        min_threshold = threshold
+        # E faz a busca binária do threshold
+        # Se for menor que 0 é porque não foi definido, então aumenta o threshold em 50%
+        if max_threshold < 0:
+          threshold += threshold/2
+        else:
+          threshold += (max_threshold - threshold)/2
+      elif n_cuts == 1:
         # Achou apenas um corte, o threshold máximo para as próximas iterações vira o threshold atual porque thresholds maiores não vão retornar cortes nas séries cortadas
         params['max_threshold'] = threshold
         params['threshold'] = threshold/2
-        return cut_pos[0], params
+        return cut_pos[0], params, [min(hm_inc, hm_dec) for hm_inc, hm_dec in zip(heat_map_increase, heat_map_decrease)]
       elif n_cuts < 1:
         # Se não achou corte, o threshold máximo vira o atual e faz a busca binária no threshold
         max_threshold = threshold
@@ -54,25 +60,34 @@ class XTSTreePageHinkley(XTSTree):
     if n_cuts == 0:
       # Se não achou cortes, pega os cortes da threshold máxima.
       ph = PageHinkley(min_instances=self.min_instances, delta=self.delta, threshold=min_threshold)
+      heat_map_increase = []
+      heat_map_decrease = []
       cut_pos = []
-      for i, val in enumerate(series[:-self.min_dist]):
+      for i, val in enumerate(series):
         ph.update(val)
+        heat_map_increase_step = ph._sum_increase - ph._min_increase
+        heat_map_decrease_step = ph._max_decrease - ph._sum_decrease
+        heat_map_increase.append(min_threshold - heat_map_increase_step)
+        heat_map_decrease.append(min_threshold - heat_map_decrease_step)
         if ph.drift_detected:
           cut_pos.append(i)
     
-
     # Se estourar o máximo de iterações, escolhe o ponto que gera mais estacionariedade
     if len(cut_pos) == 0:
       print(f'Não achei nenhum corte em {self.max_iter} iterações, nó tem que ser folha')
-      return -1, params
+      return -1, params, [min(hm_inc, hm_dec) for hm_inc, hm_dec in zip(heat_map_increase, heat_map_decrease)]
     print(f'Não achei só um corte, escolhendo corte que gera maior pontuação, {len(series)}, {threshold}, {n_cuts}')
-    max_stat = self.stop_func(series[:cut_pos[0]], depth) + self.stop_func(series[cut_pos[0]:], depth)
+    sf1, _ = self.stop_func(series[:cut_pos[0]], depth)
+    sf2, _ = self.stop_func(series[cut_pos[0]:], depth)
+    max_stat = sf1 + sf2
     final_cut = cut_pos[0]
     for pos in cut_pos[1:]:
-      pos_stat = self.stop_func(series[:pos], depth) + self.stop_func(series[pos:], depth)
+      sf1, _ = self.stop_func(series[:pos], depth)
+      sf2, _ = self.stop_func(series[pos:], depth)
+      pos_stat = sf1 + sf2
       if pos_stat > max_stat:
         max_stat = pos_stat
         final_cut = pos
     params['max_threshold'] = max_threshold
     params['threshold'] = threshold
-    return final_cut, params
+    return final_cut, params, [min(hm_inc, hm_dec) for hm_inc, hm_dec in zip(heat_map_increase, heat_map_decrease)]
