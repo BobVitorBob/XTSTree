@@ -97,7 +97,10 @@ class XTSTree:
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
     if cut_pos <= 0:
       return None
-
+    min_hm = min(heatmap)
+    max_hm = max(heatmap)
+    heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]	
+  
     node = TreeNode({'cut_pos': cut_pos, 'heatmap': heatmap})
     node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
     node.right = self._recursive_tree(series[cut_pos:], params=params, curr_depth=curr_depth+1)
@@ -119,9 +122,7 @@ class XTSTree:
     heatmap = XTSTree._get_heatmap(self.tree.root)
     if len(heatmap) == 0:
       return []
-    min_hm = min(heatmap)
-    max_hm = max(heatmap)
-    return [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]
+    return heatmap
     # return heatmap
   
   @staticmethod
@@ -132,9 +133,9 @@ class XTSTree:
     if len(par_heatmap) == 0:
       par_heatmap = node.cont['heatmap']
 
-    heatmap = [min(heatmap_el, par) for heatmap_el, par in zip(node.cont['heatmap'], par_heatmap)]
+    heatmap = node.cont['heatmap']
     l_heatmap = XTSTree._get_heatmap(node.left, heatmap[:node.cont['cut_pos']])
-    r_heatmap = XTSTree._get_heatmap(node.right, heatmap[node.cont['cut_pos']:])
+    r_heatmap = XTSTree._get_heatmap(node.right, par_heatmap[node.cont['cut_pos']:])
 
     return l_heatmap + r_heatmap
     
