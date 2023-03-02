@@ -10,4 +10,4 @@ class XTSTreeRandomCut(XTSTree):
 
   def _find_cut(self, series: Iterable, params: dict, depth=0):
     cut = random.randint(self.min_dist, len(series) - self.min_dist)
-    return cut, params
+    return cut, params, []

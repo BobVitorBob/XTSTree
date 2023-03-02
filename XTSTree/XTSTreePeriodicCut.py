@@ -8,4 +8,4 @@ class XTSTreePeriodicCut(XTSTree):
 
   def _find_cut(self, series: Iterable, params: dict, depth=0):
     cut = int(len(series)/2)
-    return cut, params
+    return cut, params, []
