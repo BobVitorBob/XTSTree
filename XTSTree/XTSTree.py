@@ -1,7 +1,8 @@
 from Structures.Tree import Tree, TreeNode
 from collections.abc import Iterable
 from typing import Tuple, List
-from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import adfuller, kpss
+import numpy as np
 
 class XTSTree:
   
@@ -10,6 +11,10 @@ class XTSTree:
       self.stop_func=self._depth_stop_condition
     elif stop_condition == 'adf':
       self.stop_func=self._adf_stop_condition
+    elif stop_condition == 'kpss':
+      self.stop_func=self._kpss_stop_condition
+    elif stop_condition == 'adf_kpss':
+      self.stop_func=self._adf_kpss_stop_condition
     else:
       raise ValueError(f'Stop condition {stop_condition} not supported')
     self.stop_val = stop_val
@@ -19,18 +24,61 @@ class XTSTree:
     self.tree = Tree()
   
   def _depth_stop_condition(self, series: Iterable, depth:int):
-    return depth - (self.stop_val - 1)
+    return depth - (self.stop_val - 1), series
   
-  def _adf_stop_condition(self, series: Iterable, depth=0):
+  def _adf_kpss_stop_condition(self, series: Iterable, depth:int):
     try:
       adf_test = adfuller(series)
+      print('adf')
+      print(adf_test)
     except ValueError as e:
       # Série pequena demais
       print('Série pequena demais para adf, deve terminar o corte')
       # Retorna 0 pra parar os cortes e recompensar o mínimo possível a folha
-      return 0
+      return 0, series
+    try:
+      kpss_test = kpss(series)
+      print('kpss')
+      print(kpss_test)
+    except ValueError as e:
+      # Série pequena demais
+      print('Série pequena demais para kpss, deve terminar o corte')
+      # Retorna 0 pra parar os cortes e recompensar o mínimo possível a folha
+      return 0, series
+    kpss_test_result = kpss_test[3]['5%'] - kpss_test[0] - self.stop_val
+    adf_test_result = adf_test[4]['5%'] - adf_test[0] - self.stop_val
+    
+    if kpss_test_result * adf_test_result < 0:
+      new_series = np.diff(np.array(series))
+      adf_test = adfuller(series)
+      kpss_test = kpss(series)
+      kpss_test_result = kpss_test[3]['5%'] - kpss_test[0] - self.stop_val
+      adf_test_result = adf_test[4]['5%'] - adf_test[0] - self.stop_val
+    else:
+      new_series = series
+    
+    return min(kpss_test_result, adf_test_result), new_series
+  
+  def _kpss_stop_condition(self, series: Iterable, depth=0):
+    try:
+      kpss_test = kpss(series)
+    except ValueError as e:
+      # Série pequena demais
+      print('Série pequena demais para kpss, deve terminar o corte')
+      # Retorna 0 pra parar os cortes e recompensar o mínimo possível a folha
+      return 0, series
+    return kpss_test[0] - kpss_test[3]['5%'] - self.stop_val, series
+  
+  def _adf_stop_condition(self, series: Iterable, depth=0):
+    try:
+      adf_test = adfuller(series, regression='c')
+    except ValueError as e:
+      # Série pequena demais
+      print('Série pequena demais para adf, deve terminar o corte')
+      # Retorna 0 pra parar os cortes e recompensar o mínimo possível a folha
+      return 0, series
       
-    return adf_test[1] - self.stop_val
+    return adf_test[0] - adf_test[4]['5%'] - self.stop_val, series
   
   # Cria a árvore e acha os splits para uma série
   def create_splits(self, series: Iterable):
@@ -39,17 +87,18 @@ class XTSTree:
 
   # Função recursiva para encontrar os nós e criar a árvore
   def _recursive_tree(self, series: Iterable, params: dict, curr_depth=0):
-    if self.stop_func(series, curr_depth) >= 0 or len(series) < (self.min_dist * 2):
+    stop_func_result, series = self.stop_func(series, curr_depth)
+    if stop_func_result >= 0 or len(series) < (self.min_dist * 2):
       return None
     # Achando a posição de corte e pegando os parâmetros da função de corte
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
-    cut_pos, params, heat_map_increase, heat_map_decrease = self._find_cut(series=series, params=params, depth=curr_depth)
+    cut_pos, params, heatmap = self._find_cut(series=series, params=params, depth=curr_depth)
 
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
     if cut_pos <= 0:
       return None
 
-    node = TreeNode({'cut_pos': cut_pos, 'hm_inc': heat_map_increase, 'hm_dec': heat_map_decrease})
+    node = TreeNode({'cut_pos': cut_pos, 'heatmap': heatmap})
     node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
     node.right = self._recursive_tree(series[cut_pos:], params=params, curr_depth=curr_depth+1)
       
@@ -68,6 +117,8 @@ class XTSTree:
 
   def get_heatmap(self) -> Tuple[List, List]:
     heatmap = XTSTree._get_heatmap(self.tree.root)
+    if len(heatmap) == 0:
+      return []
     min_hm = min(heatmap)
     max_hm = max(heatmap)
     return [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]
@@ -79,9 +130,9 @@ class XTSTree:
       return par_heatmap
 
     if len(par_heatmap) == 0:
-      par_heatmap = node.cont['hm_inc']
+      par_heatmap = node.cont['heatmap']
 
-    heatmap = [min(inc, dec, par) for inc, dec, par in zip(node.cont['hm_inc'], node.cont['hm_dec'], par_heatmap)]
+    heatmap = [min(heatmap_el, par) for heatmap_el, par in zip(node.cont['heatmap'], par_heatmap)]
     l_heatmap = XTSTree._get_heatmap(node.left, heatmap[:node.cont['cut_pos']])
     r_heatmap = XTSTree._get_heatmap(node.right, heatmap[node.cont['cut_pos']:])
 
