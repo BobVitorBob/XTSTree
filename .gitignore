@@ -2,9 +2,7 @@ __pycache__
 .vscode
 wandb/*
 test/*
-logs_consistency/*.csv
-logs_consistency/images/*.pdf
-logs_consistency/logs/*.csv
-logs_consistency/symbreg_objects/*.bkup
-logs_consistency/symbreg_objects/*.pkl
-logs_consistency/symbreg_objects/*.csv
+logs_consistency/*
+toy_files/*
+blacklist/*
+river_copy/*
