@@ -1,12 +1,9 @@
 import numpy as np
 from plot import plot
-import math
 from pysr import PySRRegressor
 from XTSTree.XTSTreePageHinkley import XTSTreePageHinkley
 import pandas as pd
 import time
-
-import random
 
 files_path = 'toy_files'
 
@@ -38,8 +35,7 @@ def evaluate_ts(current_ts, model):
     perf_mse = round(mse(y, yhat),2)
     perf_rmse = round(rmse(y, yhat),2)
     perf_mape = round(mape(y, yhat),2)
-
-    return model, model.get_best()['lambda_format'](np.array(X)), perf_mae, perf_mse, perf_rmse, perf_mape, model.get_best()['complexity'], model.get_best()['equation']
+    return model, model.get_best()['lambda_format'](np.array(X)), perf_mae, perf_mse, perf_rmse, perf_mape, model.get_best()['complexity'], model.get_best()['equation'], model.get_best()['sympy_format']
   
 def mae(y, y_hat):
     return np.mean(np.abs(y - y_hat))
@@ -79,26 +75,37 @@ def mase(y, y_hat, y_train):
 
     return mae / mae_in_sample
 
+generator = np.random.default_rng(42)
+
+series = np.concatenate([
+  np.array(generator.uniform(-0.2, 0.2, 100)) + np.linspace(0, 5, 100)[::-1],
+  
+  np.array(generator.uniform(-0.2, 0.2, 200)),
+  np.array(generator.uniform(-0.2, 0.2, 150)) + np.linspace(0, 5, 150),
+  np.array(generator.uniform(-0.2, 0.2, 50)) + np.linspace(0, 5, 50)[::-1],
+
+  np.array(generator.uniform(-0.2, 0.2, 200)),
+  np.array(generator.uniform(-0.2, 0.2, 150)) + np.linspace(0, 5, 150),
+  np.array(generator.uniform(-0.2, 0.2, 50)) + np.linspace(0, 5, 50)[::-1],
+
+  np.array(generator.uniform(-0.2, 0.2, 200)),
+  np.array(generator.uniform(-0.2, 0.2, 150)) + np.linspace(0, 5, 150),
+  np.array(generator.uniform(-0.2, 0.2, 50)) + np.linspace(0, 5, 50)[::-1],
+])
+series = series + np.sin([i/20 for i in range(len(series))])
+
 list_XTSTree = [
-  ['PageHinkley_adf', XTSTreePageHinkley(stop_condition='adf', stop_val=0, min_dist=40)],
+  ['PageHinkley_adf', XTSTreePageHinkley(stop_condition='adf', stop_val=0, min_dist=int(len(series)/100), max_iter=100)],
   # ['RandomCut_adf', XTSTreeRandomCut(stop_condition='adf', stop_val=0, min_dist=0)],
   # ['PeriodicCut_adf', XTSTreePeriodicCut(stop_condition='adf', stop_val=0, min_dist=0)],
 ]
 
-series = np.concatenate([
-	np.array([random.uniform(-0.2, 0.2) for _ in range(200)]) + np.sin([i/10 for i in range(200)]),
-	np.array([random.uniform(-0.2, 0.2) for _ in range(200)]) + np.arange(0, 5, 5/200)+np.sin([i/10 for i in range(200)]),
-	np.array([random.uniform(-0.2, 0.2) for _ in range(200)]) + 2*np.sin([i/10 for i in range(200)]),
-	np.array([random.uniform(-0.2, 0.2) for _ in range(200)]) + np.sin([i/10 for i in range(200)]),
-])
 plot(series, show=False, save=True, img_name=f'{files_path}/images/series.jpeg', show_axis=(True, False))
-for criteria in ['accuracy', 'best']:
-
-
+for criteria in ['accuracy', 'best', 'score']:
   for tree_name, xtstree in list_XTSTree:
     print('Aplicando SR série toda,', criteria)
     t = time.perf_counter()
-    model, yhat, series_MAE, series_MSE, series_RMSE, series_MAPE, series_complexity, formula = evaluate_ts(
+    model, yhat, series_MAE, series_MSE, series_RMSE, series_MAPE, series_complexity, formula, latex_formula = evaluate_ts(
                 series,
                 get_regressor(criteria, 'toy_full', 20, 40, 5, files_path)
               )
@@ -115,6 +122,7 @@ for criteria in ['accuracy', 'best']:
       series_RMSE,
       series_MAPE,
       formula,
+      latex_formula,
       series_complexity,
       criteria,
       t_diff
@@ -135,7 +143,7 @@ for criteria in ['accuracy', 'best']:
     for start, finish in zip([0, *cuts], [*cuts, len(series)]):
 
       t_cut = time.perf_counter()
-      model, yhat, leaf_MAE, leaf_MSE, leaf_RMSE, leaf_MAPE, leaf_complexity, formula = evaluate_ts(
+      model, yhat, leaf_MAE, leaf_MSE, leaf_RMSE, leaf_MAPE, leaf_complexity, formula, latex_formula = evaluate_ts(
         series[start:finish],
         get_regressor(
           criteria,
@@ -156,6 +164,7 @@ for criteria in ['accuracy', 'best']:
         leaf_RMSE,
         leaf_MAPE,
         formula,
+        latex_formula,
         leaf_complexity,
         criteria,
         t_cut_diff
@@ -174,6 +183,7 @@ for criteria in ['accuracy', 'best']:
       "RMSE",
       "MAPE",
       "Equation",
+      "Latex Equation",
       "Complexity",
       "Criteria",
       "Time"
@@ -182,7 +192,3 @@ for criteria in ['accuracy', 'best']:
     for metric in ['MAE', 'MSE', 'RMSE', 'MAPE', 'Complexity', 'Time']:
       print(f'Mean {metric}', df_experiment_log_cuts[metric].mean())
       print(f'Std {metric}', df_experiment_log_cuts[metric].std())
-    
-    print(f'Equações: ')
-    for eq in experiment_log_cuts:
-      print(eq[6])
