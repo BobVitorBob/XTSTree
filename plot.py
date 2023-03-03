@@ -30,7 +30,7 @@ def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], marg
 
  
   if labels:
-    plt.xticks([label[0] for label in labels], [label[1] for label in labels], rotation=45)
+    plt.xticks([label['x'] for label in labels], [label['label'] for label in labels])
   for subplot in sec_plots:
     plt.plot(subplot, linewidth=0.5, color='r')
   for i in detected_anomalies:
