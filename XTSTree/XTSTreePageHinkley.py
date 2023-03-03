@@ -5,7 +5,7 @@ from river.drift import PageHinkley
 class XTSTreePageHinkley(XTSTree):
   
   def __init__(self, stop_condition: str='depth', stop_val=2, max_iter=1000, min_dist:int=0, min_instances: int=30, delta: float=0.005, starting_threshold: float=50.0, alpha: float=1 - 0.0001):
-    self.min_instances = min_instances
+    self.min_instances = max(min_instances, min_dist)
     self.delta = delta
     self.threshold = starting_threshold
     self.alpha = alpha
@@ -34,7 +34,8 @@ class XTSTreePageHinkley(XTSTree):
         heat_map_increase.append(threshold - heat_map_increase_step)
         heat_map_decrease.append(threshold - heat_map_decrease_step)
         if ph.drift_detected:
-          cut_pos.append(i)
+          if i + self.min_dist < len(series):
+            cut_pos.append(i)
       n_cuts = len(cut_pos)
       # Se detectou mais de um corte, então tem que aumentar o threshold
       if n_cuts > 1:
@@ -76,7 +77,7 @@ class XTSTreePageHinkley(XTSTree):
     if len(cut_pos) == 0:
       print(f'Não achei nenhum corte em {self.max_iter} iterações, nó tem que ser folha')
       return -1, params, [min(hm_inc, hm_dec) for hm_inc, hm_dec in zip(heat_map_increase, heat_map_decrease)]
-    print(f'Não achei só um corte, escolhendo corte que gera maior pontuação, {len(series)}, {threshold}, {n_cuts}')
+    print(f'Não achei só um corte, escolhendo corte que gera maior pontuação, {len(series)}, {threshold}, {n_cuts}, {depth}')
     sf1, _ = self.stop_func(series[:cut_pos[0]], depth)
     sf2, _ = self.stop_func(series[cut_pos[0]:], depth)
     max_stat = sf1 + sf2
