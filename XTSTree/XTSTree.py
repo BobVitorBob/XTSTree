@@ -78,7 +78,7 @@ class XTSTree:
       # Retorna 0 pra parar os cortes e recompensar o mínimo possível a folha
       return 0, series
       
-    return adf_test[0] - adf_test[4]['5%'] - self.stop_val, series
+    return adf_test[0] - adf_test[4]['5%'] + self.stop_val, series
   
   # Cria a árvore e acha os splits para uma série
   def create_splits(self, series: Iterable):
@@ -97,9 +97,10 @@ class XTSTree:
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
     if cut_pos <= 0:
       return None
-    min_hm = min(heatmap)
-    max_hm = max(heatmap)
-    heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]	
+    if heatmap and len(heatmap) > 0:
+      min_hm = min(heatmap)
+      max_hm = max(heatmap)
+      heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]	
   
     node = TreeNode({'cut_pos': cut_pos, 'heatmap': heatmap})
     node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
