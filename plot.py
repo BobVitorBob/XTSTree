@@ -3,10 +3,10 @@ import numpy as np
 from matplotlib.collections import LineCollection
 
 
-def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], margins=None, title='', save=False, img_name=None, show=True, divisions=[], sec_plots=[], figsize=(4,2), color_gradient=None, color_pallete='viridis', backgrounds=[], show_axis: (bool, bool)=(True, True)):
+def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], margins=None, title='', save=False, img_name=None, show=True, divisions=[], sec_plots=[], figsize=(4,2), dpi=360, color_gradient=None, color_pallete='viridis', backgrounds=[], show_axis: (bool, bool)=(True, True)):
   X=range(len(vals))
   max_y, min_y = max([max(vals), *[max(sec_val) for sec_val in sec_plots]]), min([min(vals), *[min(sec_val) for sec_val in sec_plots]])
-  fig, ax = plt.subplots(figsize=figsize, dpi=360)
+  fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
   ax.set_title(title)
   
   ax.get_xaxis().set_visible(show_axis[0])
