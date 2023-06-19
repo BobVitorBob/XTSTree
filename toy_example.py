@@ -100,8 +100,8 @@ list_XTSTree = [
   # ['PeriodicCut_adf', XTSTreePeriodicCut(stop_condition='adf', stop_val=0, min_dist=0)],
 ]
 
-plot(series, show=False, save=True, img_name=f'{files_path}/images/series.jpeg', show_axis=(True, False))
-for criteria in ['accuracy', 'best', 'score']:
+plot(series, show=False, save=True, img_name=f'{files_path}/images/series.jpeg', show_axis=(True, False), figsize=(8,4), dpi=720)
+for criteria in ['accuracy']:
   for tree_name, xtstree in list_XTSTree:
     print('Aplicando SR série toda,', criteria)
     t = time.perf_counter()
@@ -110,8 +110,7 @@ for criteria in ['accuracy', 'best', 'score']:
                 get_regressor(criteria, 'toy_full', 20, 40, 5, files_path)
               )
     t_diff = time.perf_counter() - t
-
-    plot(series, show=False, save=True, img_name=f'{files_path}/images/series_sr_{criteria}.jpeg', sec_plots=[yhat], show_axis=(True, False))
+    plot(series, show=False, save=True, img_name=f'{files_path}/images/series_sr_{criteria}.jpeg', sec_plots=[yhat], show_axis=(True, False), figsize=(8,4), dpi=720)
     print(formula)
     print(f'series_MAE: {series_MAE}', f'series_MSE: {series_MSE}', f'series_RMSE: {series_RMSE}', f'series_MAPE: {series_MAPE}', f'series_complexity: {series_complexity}')
     experiment_log_cuts = [[
@@ -136,26 +135,32 @@ for criteria in ['accuracy', 'best', 'score']:
 
     cuts = xtstree.cut_points()
     
-    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_cuts_{criteria}.jpeg', title=f'Segments with {tree_name}', show_axis=(True, False))
-    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_cuts_{criteria}_heatmap.jpeg', title=f'Heatmap for {tree_name}', color_gradient=heatmap, color_pallete='viridis', show_axis=(True, False))
+    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_cuts_{criteria}.jpeg', title=f'Segments with {tree_name}', show_axis=(True, False), figsize=(8,4), dpi=720)
+    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_cuts_{criteria}_heatmap.jpeg', title=f'Heatmap for {tree_name}', color_gradient=heatmap, color_pallete='viridis', show_axis=(True, False), figsize=(8,4), dpi=720)
 
     plot_cuts = []
     for start, finish in zip([0, *cuts], [*cuts, len(series)]):
-
-      t_cut = time.perf_counter()
-      model, yhat, leaf_MAE, leaf_MSE, leaf_RMSE, leaf_MAPE, leaf_complexity, formula, latex_formula = evaluate_ts(
-        series[start:finish],
-        get_regressor(
-          criteria,
-          f'toy_example_{start}-{finish}',
-          20,
-          40,
-          5,
-          files_path
+      done = False
+      while not done:
+        t_cut = time.perf_counter()
+        model, yhat, leaf_MAE, leaf_MSE, leaf_RMSE, leaf_MAPE, leaf_complexity, formula, latex_formula = evaluate_ts(
+          series[start:finish],
+          get_regressor(
+            criteria,
+            f'toy_example_{start}-{finish}',
+            20,
+            40,
+            5,
+            files_path
+          )
         )
-      )
-      t_cut_diff = time.perf_counter() - t_cut
+        t_cut_diff = time.perf_counter() - t_cut
+        plot(series[start:finish], show=True, sec_plots=[yhat], show_axis=(True, False), figsize=(8,4), dpi=720)
+        res = input('Done?')
+        if res == 'y':
+          done = True
       plot_cuts.append(yhat)
+      plot(series[start:finish], show=False, save=True, img_name=f'{files_path}/images/leaves/cuts_{start}_{finish}_{criteria}.jpeg', sec_plots=[yhat], show_axis=(True, False), figsize=(8,4), dpi=720)
       experiment_log_cuts.append([
         start,
         finish,
@@ -169,9 +174,8 @@ for criteria in ['accuracy', 'best', 'score']:
         criteria,
         t_cut_diff
       ])
-
-    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_sr_on_cuts_{criteria}.jpeg', title=f'Segments with {tree_name}', sec_plots=[np.concatenate(plot_cuts).ravel().tolist()], show_axis=(True, False))
-    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_sr_on_cuts_{criteria}.jpeg', title=f'Heatmap for {tree_name}', color_gradient=heatmap, color_pallete='viridis', sec_plots=[np.concatenate(plot_cuts).ravel().tolist()], show_axis=(True, False))
+    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_sr_on_cuts_{criteria}.jpeg', title=f'Segments with {tree_name}', sec_plots=[np.concatenate(plot_cuts).ravel().tolist()], show_axis=(True, False), figsize=(8,4), dpi=720)
+    plot(series, divisions=cuts, show=False, save=True, img_name=f'{files_path}/images/series_sr_on_cuts_{criteria}_heatmap.jpeg', title=f'Heatmap for {tree_name}', color_gradient=heatmap, color_pallete='viridis', sec_plots=[np.concatenate(plot_cuts).ravel().tolist()], show_axis=(True, False), figsize=(8,4), dpi=720)
 
     df_experiment_log_cuts = pd.DataFrame(experiment_log_cuts)
 
@@ -192,3 +196,31 @@ for criteria in ['accuracy', 'best', 'score']:
     for metric in ['MAE', 'MSE', 'RMSE', 'MAPE', 'Complexity', 'Time']:
       print(f'Mean {metric}', df_experiment_log_cuts[metric].mean())
       print(f'Std {metric}', df_experiment_log_cuts[metric].std())
+
+    new_series = np.concatenate([
+      np.array(generator.uniform(-0.2, 0.2, 100)) + np.linspace(0, 5, 100)[::-1],
+      
+      np.array(generator.uniform(-0.2, 0.2, 200)),
+      np.array(generator.uniform(-0.2, 0.2, 150)) + np.linspace(0, 5, 150),
+      np.array(generator.uniform(-0.2, 0.2, 50)) + np.linspace(0, 5, 50)[::-1],
+
+      np.array(generator.uniform(-0.2, 0.2, 200)),
+      np.array(generator.uniform(-0.2, 0.2, 150)) + np.linspace(0, 5, 150),
+      np.array(generator.uniform(-0.2, 0.2, 50)) + np.linspace(0, 5, 50)[::-1],
+
+      np.array(generator.uniform(-0.2, 0.2, 200)),
+      np.array(generator.uniform(-0.2, 0.2, 150)) + np.linspace(0, 5, 150),
+      np.array(generator.uniform(-0.2, 0.2, 50)) + np.linspace(0, 5, 50)[::-1],
+    ])
+    new_series = new_series + np.sin([i/20 for i in range(len(new_series))])
+    new_series = np.concatenate([np.array(series), np.array(new_series)])  
+    plot(new_series, divisions=[len(series)], show=False, save=True,
+         img_name=f'{files_path}/images/series_sr_on_cuts_{criteria}_extended.jpeg',
+         title=f'Segments with {tree_name}, extended version',
+         sec_plots=[np.concatenate([np.concatenate(plot_cuts), np.concatenate(plot_cuts)]).ravel().tolist()],
+         show_axis=(True, False), figsize=(8,4), dpi=720)
+    plot(new_series, divisions=[len(series)], show=False, save=True,
+         img_name=f'{files_path}/images/series_sr_on_cuts_{criteria}_heatmap_extended.jpeg', 
+         title=f'Heatmap for {tree_name}, extended version', color_gradient=heatmap, color_pallete='viridis', 
+         sec_plots=[np.concatenate([np.concatenate(plot_cuts), np.concatenate(plot_cuts)]).ravel().tolist()],
+         show_axis=(True, False), figsize=(8,4), dpi=720)
