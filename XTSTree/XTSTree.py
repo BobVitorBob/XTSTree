@@ -3,6 +3,21 @@ from collections.abc import Iterable
 from typing import Tuple, List
 from statsmodels.tsa.stattools import adfuller, kpss
 import numpy as np
+from sklearn.linear_model import LinearRegression
+
+def rmse(y, y_hat):
+  return np.sqrt(np.mean(np.square(y - y_hat)))
+
+def apply_lr(X, y, silent=True):
+  X = np.array(X)
+  if X.ndim == 1:
+    X = X.reshape(-1, 1)
+  reg = LinearRegression().fit(X, y)
+  if not silent:
+    print('score', reg.score(X, y))
+    print('coef_', reg.coef_)
+    print('intercept_', reg.intercept_)
+  return reg, reg.score(X, y), reg.coef_, reg.intercept_
 
 class XTSTree:
   
@@ -15,6 +30,8 @@ class XTSTree:
       self.stop_func=self._kpss_stop_condition
     elif stop_condition == 'adf_kpss':
       self.stop_func=self._adf_kpss_stop_condition
+    elif stop_condition == 'lr_error':
+      self.stop_func=self._lr_error_stop_condition
     else:
       raise ValueError(f'Stop condition {stop_condition} not supported')
     self.stop_val = stop_val
@@ -25,6 +42,12 @@ class XTSTree:
   
   def _depth_stop_condition(self, series: Iterable, depth:int):
     return depth - (self.stop_val - 1), series
+  
+  def _lr_error_stop_condition(self, series: Iterable, depth:int):
+    m_model, _, _, _ = apply_lr(np.array(range(len(series))), series)
+    y_hat = m_model.predict(np.array(range(len(series))).reshape(-1, 1))
+    error = rmse(series, y_hat)
+    return error - self.stop_val, series
   
   def _adf_kpss_stop_condition(self, series: Iterable, depth:int):
     try:
