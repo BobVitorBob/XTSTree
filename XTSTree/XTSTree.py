@@ -47,7 +47,7 @@ class XTSTree:
     m_model, _, _, _ = apply_lr(np.array(range(len(series))), series)
     y_hat = m_model.predict(np.array(range(len(series))).reshape(-1, 1))
     error = rmse(series, y_hat)
-    return error - self.stop_val, series
+    return self.stop_val - error, series
   
   def _adf_kpss_stop_condition(self, series: Iterable, depth:int):
     try:
@@ -116,7 +116,6 @@ class XTSTree:
     # Achando a posição de corte e pegando os parâmetros da função de corte
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
     cut_pos, params, heatmap = self._find_cut(series=series, params=params, depth=curr_depth)
-
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
     if cut_pos <= 0:
       return None

@@ -2,7 +2,26 @@
 from sklearn.linear_model import LinearRegression
 import numpy as np
 from plot import plot
-from utils import *
+from sklearn.linear_model import LinearRegression
+
+def mae(y, y_hat):
+  return np.mean(np.abs(np.array(y) - np.array(y_hat)))
+
+def apply_lr(X, y, silent=True):
+  X = np.array(X)
+  if X.ndim == 1:
+    X = X.reshape(-1, 1)
+  reg = LinearRegression().fit(X, y)
+  if not silent:
+    print('score', reg.score(X, y))
+    print('coef_', reg.coef_)
+    print('intercept_', reg.intercept_)
+  return reg, reg.score(X, y), reg.coef_, reg.intercept_
+
+def lr_error(X, y, model):
+  model, _, _, _ = apply_lr(X, y)
+  error = mae(y, model.predict(X))
+  return error, model
 
 # full_error, original_model  = apply_lr(np.array(range(len(series)), series))
 class BottomUp:
@@ -11,18 +30,18 @@ class BottomUp:
     self.series = series
     self._reset()
   
-  def _reset(self):
+  def _reset(self, init_seg_size=2):
     self.segments = []
-    for i in range(0, len(self.series), 2):
-      seg = self.series[i:i+2]
-      model, _, coef, intercept = apply_lr(list(range(i, i+2)), seg)
-      error = mae(seg, model.predict(np.array(range(i, i+2)).reshape(-1, 1)))
-      self.segments.append({'model': model, 'start': i, 'end': i+1, 'seg': seg, 'error': error})
+    for i in range(0, len(self.series), init_seg_size):
+      seg = self.series[i:i+init_seg_size]
+      model, _, coef, intercept = apply_lr(list(range(i, i+init_seg_size)), seg)
+      error = mae(seg, model.predict(np.array(range(i, i+init_seg_size)).reshape(-1, 1)))
+      self.segments.append({'model': model, 'start': i, 'end': i+init_seg_size-1, 'seg': seg, 'error': error})
 
-  def fit(threshold, mode='seg'):
-    self.reset()
+  def fit(self, threshold, mode='seg', init_seg_size=2, print_when=[], path='./'):
+    self._reset(init_seg_size)
     curr_error = 0
-    error_threshold = full_error * 0.05
+    # error_threshold = full_error * 0.05
     # while curr_error < error_threshold:
     while len(self.segments) > threshold:
       errors = []
@@ -48,7 +67,23 @@ class BottomUp:
       for seg in self.segments:
         prediction = seg['model'].predict(np.array(range(seg['start'], seg['end']+1)).reshape(-1, 1))
         predicted_series = [*predicted_series, *prediction]
-      curr_error = mae(series, predicted_series)
+      curr_error = mae(self.series, predicted_series)
+      if len(self.segments) in print_when:
+        divs = [seg['end'] for seg in self.segments][:-1]
+        plot(self.series,
+          divisions=divs,
+          show=False,
+          save=True,
+          show_axis=(False, False),
+          figsize=(3.5,3),
+	        dpi=720,
+          img_name=f'{path}/{len(self.segments)}_segments.jpeg',
+          # backgrounds=[
+          # 	{'start': 0,'end': divs[0], 'color': '#0066FF'},
+          # 	{'start': divs[0],'end': divs[1], 'color': '#D3321D'},
+          # 	{'start': divs[1],'end': len(con_drift), 'color': '#66DF4D'}
+          # ],
+        )
     return self.segments
 # %%
 # print('erro sem segmentação', full_error)

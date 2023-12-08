@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib.collections import LineCollection
 
 
-def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], margins=None, title='', save=False, img_name=None, show=True, divisions=[], sec_plots=[], figsize=(4,2), dpi=360, color_gradient=None, color_pallete='viridis', backgrounds=[], show_axis: (bool, bool)=(True, True)):
+def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], margins=None, title='', save=False, img_name=None, show=True, divisions=[], sec_plots=[], figsize=(4,2), dpi=360, color_gradient=None, color_pallete='viridis', backgrounds=[], show_axis: (bool, bool)=(True, True), frame=True):
   X=range(len(vals))
   max_y, min_y = max([max(vals), *[max(sec_val) for sec_val in sec_plots]]), min([min(vals), *[min(sec_val) for sec_val in sec_plots]])
   fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
@@ -11,6 +11,12 @@ def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], marg
   
   ax.get_xaxis().set_visible(show_axis[0])
   ax.get_yaxis().set_visible(show_axis[1])
+  
+  if frame == False:
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
   
   for bg in backgrounds:
     plt.axvspan(bg['start'], bg['end'], facecolor=bg['color'], alpha=0.1)
