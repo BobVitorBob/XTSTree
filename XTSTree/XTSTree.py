@@ -1,5 +1,5 @@
 from Structures.Tree import Tree, TreeNode
-from collections.abc import Iterable
+from collections.abc import Iterable, Callable
 from typing import Tuple, List
 from statsmodels.tsa.stattools import adfuller, kpss
 import numpy as np
@@ -21,8 +21,10 @@ def apply_lr(X, y, silent=True):
 
 class XTSTree:
   
-  def __init__(self, stop_condition:str='depth', stop_val=3, max_iter=1000, min_dist=0, params:dict={}):
-    if stop_condition == 'depth':
+  def __init__(self, stop_condition:(str | Callable[[Iterable, float], [float, Iterable]])='depth', stop_val=3, max_iter=1000, min_dist=0, params:dict={}):
+    if callable(stop_condition):
+      self.stop_func=stop_condition
+    elif stop_condition == 'depth':
       self.stop_func=self._depth_stop_condition
     elif stop_condition == 'adf':
       self.stop_func=self._adf_stop_condition
@@ -111,18 +113,21 @@ class XTSTree:
   # Função recursiva para encontrar os nós e criar a árvore
   def _recursive_tree(self, series: Iterable, params: dict, curr_depth=0):
     stop_func_result, series = self.stop_func(series, curr_depth)
-    if stop_func_result >= 0 or len(series) < (self.min_dist * 2):
+    if (stop_func_result >= 0) or (len(series) < (self.min_dist * 2)):
       return None
     # Achando a posição de corte e pegando os parâmetros da função de corte
     # Isso permite que a função de corte altere os parâmetros pra chamada dos próximos nós para otimizar os cortes
-    cut_pos, params, heatmap = self._find_cut(series=series, params=params, depth=curr_depth)
+    cut_pos, params, heatmap = self._find_cut(series=series[1:-1], params=params, depth=curr_depth)
+    # Soma um na posição porque passa a série sem o primeiro e último elemento porque não são opções de posição de corte
+    cut_pos+=1
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
-    if cut_pos <= 0:
+    if cut_pos < 0:
       return None
-    if heatmap and len(heatmap) > 0:
+    if list(heatmap):
       min_hm = min(heatmap)
       max_hm = max(heatmap)
-      heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]	
+      if min_hm != max_hm:
+      	heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]
   
     node = TreeNode({'cut_pos': cut_pos, 'heatmap': heatmap})
     node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
