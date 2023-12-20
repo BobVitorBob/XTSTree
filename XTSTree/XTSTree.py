@@ -21,7 +21,7 @@ def apply_lr(X, y, silent=True):
 
 class XTSTree:
   
-  def __init__(self, stop_condition:(str | Callable[[Iterable, float], [float, Iterable]])='depth', stop_val=3, max_iter=1000, min_dist=0, params:dict={}):
+  def __init__(self, stop_condition:(str | Callable[[Iterable, float], (float, Iterable)])='depth', stop_val=3, max_iter=1000, min_dist=0, params:dict={}):
     if callable(stop_condition):
       self.stop_func=stop_condition
     elif stop_condition == 'depth':
@@ -127,15 +127,35 @@ class XTSTree:
       min_hm = min(heatmap)
       max_hm = max(heatmap)
       if min_hm != max_hm:
-      	heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]
+        heatmap = [(hm_val-min_hm)/(max_hm-min_hm) for hm_val in heatmap]
   
-    node = TreeNode({'cut_pos': cut_pos, 'heatmap': heatmap})
+    node = TreeNode({'cut_pos': cut_pos, 'heatmap': heatmap, 'entropy': stop_func_result})
     node.left = self._recursive_tree(series[:cut_pos], params=params, curr_depth=curr_depth+1)
     node.right = self._recursive_tree(series[cut_pos:], params=params, curr_depth=curr_depth+1)
-      
+
     # Retorna o nó
     return node
+
+  def calculate_entropy_gain(self):
+    self._rec_entropy_gain(self.tree.root, None)
+    return self
+  
+  def _rec_entropy_gain(self, node: TreeNode, parent: TreeNode):
+    if node is None:
+      return
+    if parent is None:
+      node.cont['entropy_gain'] = 0
+    else:
+      node.cont['entropy_gain'] = parent.cont['entropy'] - node.cont['entropy']
+    self._rec_entropy_gain(node.left, node)
+    self._rec_entropy_gain(node.right, node)
+  
+  # def get_tree_info(self):
+  #   self._rec_tree_info(self, self.tree.root)
+
+  # def _rec_tree_info(self, node):
     
+  
   # Função que encontra a posição de corte, única para cada método de corte
   def _find_cut(self, series: Iterable, params: dict, depth=0) -> Tuple[int, dict]:
     pass
@@ -186,10 +206,10 @@ class XTSTree:
     return cut_series
 
   def get_items_by_depth(self):
-    return XTSTree._get_items_by_depth(node=self.tree.root, depth=0)
+    return XTSTree._get_items_by_depth(node=self.tree.root, last_depth=0)
     
   def get_cuts_by_depth(self):
-    return XTSTree._get_cuts_by_depth(node=self.tree.root, depth=0)
+    return XTSTree._get_cuts_by_depth(node=self.tree.root, last_depth=0)
   
   def __repr__(self):
     return self.summary()
@@ -198,40 +218,40 @@ class XTSTree:
     return XTSTree._get_items_by_depth_side(self.tree.root, depth=0, side_prefix='Root')
 
   @staticmethod
-  def _get_cuts_by_depth(node: TreeNode, depth: int):
+  def _get_cuts_by_depth(node: TreeNode, last_depth: int):
     if node is None:
       return {}
-    items_dict = {depth: [node.cont['cut_pos']]}
-    for key, val in XTSTree._get_cuts_by_depth(node=node.left, depth=depth + 1).items():
-      if key in items_dict:
-        items_dict[key] += val
+    items_dict = {last_depth: [node.cont['cut_pos']]}
+    for depth, val in XTSTree._get_cuts_by_depth(node=node.left, last_depth=last_depth + 1).items():
+      if depth in items_dict:
+        items_dict[depth] += val
       else:
-        items_dict[key] = val
-    for key, val in XTSTree._get_cuts_by_depth(node=node.right, depth=depth + 1).items():
-      if key in items_dict:
-        items_dict[key] += [item + node.cont['cut_pos'] for item in val]
+        items_dict[depth] = val
+    for depth, val in XTSTree._get_cuts_by_depth(node=node.right, last_depth=last_depth + 1).items():
+      if depth in items_dict:
+        items_dict[depth] += [item + node.cont['cut_pos'] for item in val]
       else:
-        items_dict[key] = [item + node.cont['cut_pos'] for item in val]
+        items_dict[depth] = [item + node.cont['cut_pos'] for item in val]
     
     return items_dict
 
   @staticmethod
-  def _get_items_by_depth(node: TreeNode, depth: int):
+  def _get_items_by_depth(node: TreeNode, last_depth: int):
     if node is None:
       return {}
-    items_dict = {depth: [node.cont]}
-    for key, val in XTSTree._get_items_by_depth(node=node.left, depth=depth + 1).items():
-      if key in items_dict:
-        items_dict[key] += val
+    items_dict = {last_depth: [node.cont]}
+    for depth, val in XTSTree._get_items_by_depth(node=node.left, last_depth=last_depth + 1).items():
+      if depth in items_dict:
+        items_dict[depth] += val
       else:
-        items_dict[key] = val
-    for key, val in XTSTree._get_items_by_depth(node=node.right, depth=depth + 1).items():
-      for item in val:
-        item['cut_pos'] += node.cont['cut_pos']
-      if key in items_dict:
-        items_dict[key] += val
+        items_dict[depth] = val
+    for depth, val in XTSTree._get_items_by_depth(node=node.right, last_depth=last_depth + 1).items():
+      # for item in val:
+      #   item['cut_pos'] += node.cont['cut_pos']
+      if depth in items_dict:
+        items_dict[depth] += val
       else:
-        items_dict[key] = val
+        items_dict[depth] = val
     
     return items_dict
   
