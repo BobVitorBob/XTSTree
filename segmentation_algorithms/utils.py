@@ -2,10 +2,25 @@ from sklearn.linear_model import LinearRegression
 import numpy as np
 
 def mae(y, y_hat):
-  return np.mean(np.abs(y - y_hat))
+    return np.mean(np.abs(y - y_hat))
 
 def rmse(y, y_hat):
-  return np.sqrt(np.mean(np.square(y - y_hat)))
+    return np.sqrt(np.mean(np.square(y - y_hat)))
+
+def group_data(data, window_size=96):
+  """
+  Separa o vetor data em pares de vetores X de entrada e valor de predição y
+  data: Conjunto de dados
+  window_size: Tamanho dos vetores de dados em X
+  Retorna o vetor X e Y
+  """
+  data_X = []
+  data_Y = []
+  len_data = len(data)
+  for i in range(len_data - window_size):
+      data_X.append(data[i:i + window_size])
+      data_Y.append(data[i + window_size])
+  return np.array(data_X), np.array(data_Y)
 
 def create_series():
   generator = np.random.default_rng(42)
