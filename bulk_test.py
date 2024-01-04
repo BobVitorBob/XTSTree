@@ -4,11 +4,13 @@ import pandas as pd
 import numpy as np
 from numpy.typing import ArrayLike
 
+import re
+
 from segmentation_algorithms.utils import *
 
 from time import perf_counter 
 
-from plot import plot
+import os
 
 from XTSTree.XTSTree import XTSTree
 from segmentation_algorithms.topdown_index import XTSTreeTopDownIndex
@@ -24,7 +26,7 @@ def get_regressor(
     output_file='test',
     pop_n=10,
     pop_size=30,
-    iterations=40,
+    iterations=3,
     max_complexity=40,
     binary_operators=['+', '-', '*', '/', 'pow'],
     unary_operators=['sqrt', 'sin'],
@@ -51,20 +53,23 @@ def get_regressor(
     early_stop_condition=early_stop_condition
   )
 
-def treat_or_discard_series(series, perc_cut=0.5) -> bool:
+def treat_or_discard_series(series, perc_cut=0.5, min_len=96*5) -> bool:
   '''
   Retorna a série tratada se a porcentagem de NaNs for menor que perc_cut, e retorna Falso caso contrário 
   '''
+  if len(series) < min_len:
+    return False
   if (sum(np.isnan(series))/len(series)) < perc_cut:
     return np.where(np.isnan(series), 0, series)
   else:
     return False
 
-def load_series(station, feature):
-  try: 
-    return np.array(pd.read_csv(f'./datasets/base datasets/{station}/export_automaticas_{station}_{feature}.csv')[feature])
+def load_series(file_name):
+  try:
+    df = pd.read_csv(f'./datasets/umidrelmed2m/{file_name}')
+    return df[df.columns[-1]]
   except Exception as e:
-    print(f'Erro ao carregar a série: {station}, {feature}')
+    print(f'Erro ao carregar a série: {file_name}')
     raise e
 
 def fit_model(model: XTSTree, series: ArrayLike):  
@@ -90,9 +95,6 @@ def calc_error_index(series):
   return rmse(series, yhat)
 
 # --------------------------------------------------------------------------------------------
-station = '23025122'
-feature = 'tempmedar2m'
-series = treat_or_discard_series(load_series(station, feature), perc_cut=0.5)
 output = []
 if series is not False:
   error_lag = calc_error_lag(series, [4, 24, 48, 96])
