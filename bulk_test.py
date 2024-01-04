@@ -119,6 +119,7 @@ if series is not False:
   ]
 
   for rep in range(1):
+    print(f'Repetição {rep}')
     model = get_regressor()
     indexes = np.array([[i] for i, _ in enumerate(series)])
     t = perf_counter()
@@ -136,6 +137,7 @@ if series is not False:
       'numero de segmentos': 1,
     })
     pd.DataFrame(output).to_csv('./resultados.csv', index=False)
+    print('Terminou o completo')
     for name, model in models:
       segments = model.cut_series(series)
       try:
@@ -160,8 +162,10 @@ if series is not False:
           'numero de segmentos': len(segments),
         })
         pd.DataFrame(output).to_csv('./resultados.csv', index=False)
+        print(f'Terminei o {name}, Repetição {rep}')
       except Exception as e:
         print(f'Erro no PySR durante a execução nos segmentos')
+        print(f'{name}, Repetição {rep}')
         print(f'Tamanho do segmento: {len(segment)}')
         print(f'Equação: {modelo.get_best()["equation"]}')
         print(f'Erro: {e}')
