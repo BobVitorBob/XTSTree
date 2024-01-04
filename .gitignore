@@ -4,6 +4,8 @@ wandb/*
 test/*
 logs_consistency/*
 toy_files/*
+log.txt
+resultados.csv
 blacklist/*
 river_copy/*
 diagrama/*
