@@ -26,7 +26,7 @@ def get_regressor(
     output_file='test',
     pop_n=10,
     pop_size=30,
-    iterations=3,
+    iterations=40,
     max_complexity=40,
     binary_operators=['+', '-', '*', '/', 'pow'],
     unary_operators=['sqrt', 'sin'],
@@ -131,7 +131,7 @@ for par_file in par_files:
       ('TopDownIndex_75', XTSTreeTopDownIndex(stop_val=error_index*0.75, max_iter=100, min_dist=0)),
     ]
 
-    for rep in range(1):
+    for rep in range(10):
       print(f'Repetição {rep}')
       model = get_regressor()
       indexes = np.array([[i] for i, _ in enumerate(series)])
@@ -154,7 +154,7 @@ for par_file in par_files:
       })
       pd.DataFrame(output).to_csv('./resultados.csv', index=False)
       print('Terminou o completo')
-      for name, model in models[:1]:
+      for name, model in models:
         segments = model.cut_series(series)
         try:
           y_hat = []
