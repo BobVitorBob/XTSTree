@@ -215,7 +215,11 @@ class XTSTree:
       for content in val:
         tot_gain+=content["entropy_gain"]
         n_items+=1
-    return tot_gain/n_items, n_items, tot_depth
+    if n_items == 0:
+      mean_by_cut = 0
+    else:
+      mean_by_cut = tot_gain/n_items
+    return mean_by_cut, n_items, tot_depth
 
   def get_items_by_depth(self):
     return XTSTree._get_items_by_depth(node=self.tree.root, last_depth=0)
