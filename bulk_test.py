@@ -80,7 +80,6 @@ def fit_model(model: XTSTree, series: ArrayLike):
 
 def calc_error_lag(series, lags=[]):
   error_lag = {}
-  # lags de 1, 6, 12 e 24 horas
   for lag in lags:
     X, y = group_data(series, lag)
     model_lr_lag, _, _, _ = apply_lr(X, y)  
@@ -133,7 +132,7 @@ for par_file in par_files:
       pd.DataFrame(output).to_csv('./resultados.csv', index=False)
       print('Terminou o completo')
       
-      error_lag = calc_error_lag(series, [4, 24, 48, 96])
+      error_lag = calc_error_lag(series, [48])
       error_index = calc_error_index(series)
       models = [
         ('PageHinkley', XTSTreePageHinkley(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
@@ -146,13 +145,13 @@ for par_file in par_files:
         # ('RandomCut_4', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
         # ('RandomCut_5', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
         
-        *[(f'TopDownReg_{lag}_25', XTSTreeTopDownReg(stop_val=error*0.25, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
+        # *[(f'TopDownReg_{lag}_25', XTSTreeTopDownReg(stop_val=error*0.25, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
         *[(f'TopDownReg_{lag}_50', XTSTreeTopDownReg(stop_val=error*0.50, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
-        *[(f'TopDownReg_{lag}_75', XTSTreeTopDownReg(stop_val=error*0.75, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
+        # *[(f'TopDownReg_{lag}_75', XTSTreeTopDownReg(stop_val=error*0.75, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
         
         ('TopDownIndex_25', XTSTreeTopDownIndex(stop_val=error_index*0.25, max_iter=100, min_dist=0)),
-        ('TopDownIndex_50', XTSTreeTopDownIndex(stop_val=error_index*0.50, max_iter=100, min_dist=0)),
-        ('TopDownIndex_75', XTSTreeTopDownIndex(stop_val=error_index*0.75, max_iter=100, min_dist=0)),
+        # ('TopDownIndex_50', XTSTreeTopDownIndex(stop_val=error_index*0.50, max_iter=100, min_dist=0)),
+        # ('TopDownIndex_75', XTSTreeTopDownIndex(stop_val=error_index*0.75, max_iter=100, min_dist=0)),
       ]
 
       for name, model in models:
