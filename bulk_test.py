@@ -74,9 +74,8 @@ def load_series(file_name):
 
 def fit_model(model: XTSTree, series: ArrayLike):  
   model = model.create_splits(series)
-  model.calc_mean_entropy_gain_by_cut()
-  
-  return model
+  mean_by_cut, n_items, tot_depth = model.calc_mean_entropy_gain_by_cut()
+  return model, mean_by_cut, n_items, tot_depth
 
 def calc_error_lag(series, lags=[]):
   error_lag = {}
@@ -93,6 +92,9 @@ def calc_error_index(series):
   return rmse(series, yhat)
 
 # --------------------------------------------------------------------------------------------
+
+ultimos_resultados = pd.read_csv('resultados.csv')
+skip_execs = list(ultimos_resultados['nome'])
 output = []
 par_files = next(os.walk('./datasets/umidrelmed2m'))[1]
 for par_file in par_files:
@@ -108,30 +110,33 @@ for par_file in par_files:
       if series is False:
         print(f'Série {child_file} rejeitada')
         continue
-
-      print(f'Repetição {rep}')
-      reg_model = get_regressor()
-      indexes = np.array([[i] for i, _ in enumerate(series)])
-      t = perf_counter()
-      reg_model.fit(indexes, series)
-      end_t = perf_counter() - t
-
-      complexity_full = reg_model.get_best()["complexity"]
-      prediction_full = reg_model.predict(indexes)
-      output.append({
-        'nome': f'Full_{rep}_{child_file}',
-        'model': 'full',
-        'file': child_file,
-        'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, prediction_full),
-        'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, prediction_full),
-        'complexidade (média dos segmentos)': complexity_full,
-        'desvio padrão complexidade': 0,
-        'tempo': end_t,
-        'numero de segmentos': 1,
-      })
-      pd.DataFrame(output).to_csv('./resultados.csv', index=False)
-      print('Terminou o completo')
       
+      print(f'Repetição {rep}, Arquivo {child_file}')
+      if f'Full_{rep}_{child_file}' in skip_execs:
+        print('Pulei o completo porque já foi executado')
+      else:
+        reg_model = get_regressor()
+        indexes = np.array([[i] for i, _ in enumerate(series)])
+        t = perf_counter()
+        reg_model.fit(indexes, series)
+        end_t = perf_counter() - t
+
+        complexity_full = reg_model.get_best()["complexity"]
+        prediction_full = reg_model.predict(indexes)
+        output.append({
+          'nome': f'Full_{rep}_{child_file}',
+          'model': 'full',
+          'file': child_file,
+          'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, prediction_full),
+          'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, prediction_full),
+          'complexidade (média dos segmentos)': complexity_full,
+          'desvio padrão complexidade': 0,
+          'tempo': end_t,
+          'ganho médio de entropia por corte': 0,
+          'numero de segmentos': 1,
+        })
+        pd.DataFrame(output).to_csv('./resultados.csv', index=False)
+        print('Terminou o completo')
       error_lag = calc_error_lag(series, [48])
       error_index = calc_error_index(series)
       models = [
@@ -156,32 +161,36 @@ for par_file in par_files:
 
       for name, model in models:
         try:
-          fitted_model = fit_model(model=model, series=series)
-          segments = fitted_model.cut_series(series)
-          y_hat = []
-          complexities = []
-          time = perf_counter()
-          for segment in segments:
-            reg_model = get_regressor()
-            indexes = np.array([[i] for i, _ in enumerate(segment)])
-            reg_model.fit(indexes, segment)
-            prediction = reg_model.predict(indexes)
-            y_hat = y_hat + list(prediction)
-            complexities.append(reg_model.get_best()["complexity"])
-          end_t = perf_counter() - time
-          output.append({
-            'nome': f'{name}_{rep}_{child_file}',
-            'model': name,
-            'file': child_file[:-4],
-            'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, y_hat),
-            'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, y_hat),
-            'complexidade (média dos segmentos)': np.mean(complexities),
-            'desvio padrão complexidade': np.std(complexities),
-            'tempo': end_t,
-            'numero de segmentos': len(segments),
-          })
-          pd.DataFrame(output).to_csv('./resultados.csv', index=False)
-          print(f'Terminei o {name}, Repetição {rep}')
+          if f'{name}_{rep}_{child_file}' in skip_execs:
+            print(f'Pulei {f"{name}_{rep}_{child_file}"} porque já executei ele')
+          else:
+            fitted_model, mean_by_cut, n_items, tot_depth = fit_model(model=model, series=series)
+            segments = fitted_model.cut_series(series)
+            y_hat = []
+            complexities = []
+            time = perf_counter()
+            for segment in segments:
+              reg_model = get_regressor()
+              indexes = np.array([[i] for i, _ in enumerate(segment)])
+              reg_model.fit(indexes, segment)
+              prediction = reg_model.predict(indexes)
+              y_hat = y_hat + list(prediction)
+              complexities.append(reg_model.get_best()["complexity"])
+            end_t = perf_counter() - time
+            output.append({
+              'nome': f'{name}_{rep}_{child_file}',
+              'model': name,
+              'file': child_file[:-4],
+              'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, y_hat),
+              'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, y_hat),
+              'complexidade (média dos segmentos)': np.mean(complexities),
+              'desvio padrão complexidade': np.std(complexities),
+              'tempo': end_t,
+              'ganho médio de entropia por corte': mean_by_cut,
+              'numero de segmentos': len(segments),
+            })
+            pd.DataFrame(output).to_csv('./resultados.csv', index=False)
+            print(f'Terminei o {name}, Repetição {rep}')
         except Exception as e:
           print(f'Erro no PySR durante a execução nos segmentos')
           print(f'{name}, Repetição {rep}')
