@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+from scipy import stats
+
 
 if len(sys.argv) > 1:
   nome_arq = sys.argv[1]
@@ -10,6 +12,8 @@ else:
 # Lendo dados e criando lista de modelos e estatísticas de interesse
 
 dados = pd.read_csv(nome_arq).replace([np.inf, -np.inf], np.nan).dropna(axis=0, how='any').reset_index(drop=True)
+dados = dados[(np.abs(stats.zscore(dados['ganho médio de entropia por corte'])) < 3)]
+
 modelos = [
   'full',
   'PageHinkley',
@@ -32,6 +36,8 @@ resultados = {
   'mean_num_seg': [],
   'std_num_seg': [],
   'num_res': [],
+  'mean_ent_gain': [],
+  'std_ent_gain': [],
 }
 
 # Calculando estatísticas
@@ -50,6 +56,8 @@ for model in modelos:
   resultados['mean_num_seg'].append(np.mean(dados_estat['numero de segmentos']))
   resultados['std_num_seg'].append(np.std(dados_estat['numero de segmentos']))
   resultados['num_res'].append(len(dados_estat))
+  resultados['mean_ent_gain'].append(np.mean(dados_estat['ganho médio de entropia por corte']))
+  resultados['std_ent_gain'].append(np.std(dados_estat['ganho médio de entropia por corte']))
 
 estatisticas_df = pd.DataFrame(resultados, index=modelos)
 
@@ -57,7 +65,7 @@ estatisticas_df = pd.DataFrame(resultados, index=modelos)
 colors = plt.colormaps['magma'].reversed()(np.linspace(0, 1, 10)[1:-3])
 
 # Criando disposição dos plots e tamanho da figura
-fig, ((axMAE, axRMSE, axNseg), (axComp, axStdComp, axTempo)) = plt.subplots(nrows=2, ncols=3, figsize=(16,9))
+fig, ((axMAE, axRMSE, axTempo, axNseg), (axComp, axStdComp, axEntGain, _)) = plt.subplots(nrows=2, ncols=4, figsize=(20,12))
 
 # Plotando as figuras nos axes
 axMAE.bar(modelos,  estatisticas_df.mean_MAE, width=0.4, yerr = estatisticas_df.std_MAE, color=colors)
@@ -102,9 +110,16 @@ axTempo.set_ylabel('Tempo de exec. SymbReg')
 axTempo.set_ylim((0, 400))
 axTempo.set_title('Tempo de execução nos segmentos (Menor é melhor)')
 
+axEntGain.bar(modelos,  estatisticas_df.mean_ent_gain, width=0.4, yerr = estatisticas_df.std_ent_gain, color=colors)
+axEntGain.set_xlabel('modelo')
+axEntGain.tick_params(axis='x', labelrotation=45)
+axEntGain.set_ylabel('Ganho de entropia')
+axEntGain.set_ylim((-.5, .5))
+axEntGain.set_title('Ganho médio de entropia por corte')
+
 # Ajuste de espaço vertical, salva a imagem e plot final
-plt.subplots_adjust(hspace=0.6)
-plt.savefig('resultados.pdf', bbox_inches='tight')
+plt.subplots_adjust(hspace=0.4, wspace=0.2)
+plt.savefig(f'{nome_arq[:-4]}.pdf', bbox_inches='tight')
 plt.show()
 
 print(estatisticas_df.num_res)
