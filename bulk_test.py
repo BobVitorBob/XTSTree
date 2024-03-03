@@ -93,107 +93,130 @@ def calc_error_index(series):
 
 # --------------------------------------------------------------------------------------------
 
-ultimos_resultados = pd.read_csv('resultados.csv')
+rep = 0
+
+ultimos_resultados = pd.read_csv('resultados backup.csv')
 skip_execs = list(ultimos_resultados['nome'])
 output = []
 par_files = next(os.walk('./datasets/umidrelmed2m'))[1]
+dict_files = {}
 for par_file in par_files:
   child_files = next(os.walk(f'datasets/umidrelmed2m/{par_file}'))[2]
-  expected_len = (int(re.sub("[^0-9]", "", par_file)) * 96)
-  for rep in range(3):
-    for child_file in child_files:
-      series = treat_or_discard_series(
-        load_series(file_name=f'{par_file}/{child_file}'),
-        perc_cut=0.5,
-        min_len=expected_len
-      )
-      if series is False:
-        print(f'Série {child_file} rejeitada')
-        continue
-      
-      print(f'Repetição {rep}, Arquivo {child_file}')
-      if f'Full_{rep}_{child_file}' in skip_execs:
-        print('Pulei o completo porque já foi executado')
-      else:
-        reg_model = get_regressor()
-        indexes = np.array([[i] for i, _ in enumerate(series)])
-        t = perf_counter()
-        reg_model.fit(indexes, series)
-        end_t = perf_counter() - t
+  dict_files[par_file] = list(child_files)
 
-        complexity_full = reg_model.get_best()["complexity"]
-        prediction_full = reg_model.predict(indexes)
+maxlen = max([len(child) for child in dict_files.values()])
+
+for key, value in dict_files.items():
+  dict_files[key] = [*dict_files[key], *[f'{key}_' for i in range(maxlen - len(dict_files[key]))]]
+  
+  
+concat_childs = []
+for all_series in zip(*dict_files.values()):
+  for s in all_series:
+    concat_childs.append(s)
+par_files = [child.split('_')[0] for child in concat_childs]
+all_files = [[par, child] for par, child in zip(par_files, concat_childs)]
+
+for par_file, child_file in all_files:
+  expected_len = (int(re.sub("[^0-9]", "", par_file)) * 96)
+
+  if child_file == f'{par_file}_':
+    print(f'Série de padding, {child_file}')
+    continue
+
+  series = treat_or_discard_series(
+    load_series(file_name=f'{par_file}/{child_file}'),
+    perc_cut=0.5,
+    min_len=expected_len
+  )
+
+  if series is False:
+    print(f'Série {child_file} rejeitada')
+    continue
+  
+  print(f'Repetição {rep}, Arquivo {child_file}')
+  if f'Full_{rep}_{child_file}' in skip_execs:
+    print('Pulei o completo porque já foi executado')
+  else:
+    reg_model = get_regressor()
+    indexes = np.array([[i] for i, _ in enumerate(series)])
+    t = perf_counter()
+    reg_model.fit(indexes, series)
+    end_t = perf_counter() - t
+
+    complexity_full = reg_model.get_best()["complexity"]
+    prediction_full = reg_model.predict(indexes)
+    output.append({
+      'nome': f'Full_{rep}_{child_file}',
+      'model': 'full',
+      'file': child_file,
+      'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, prediction_full),
+      'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, prediction_full),
+      'complexidade (média dos segmentos)': complexity_full,
+      'desvio padrão complexidade': 0,
+      'tempo': end_t,
+      'ganho médio de entropia por corte': 0,
+      'numero de segmentos': 1,
+    })
+    pd.DataFrame(output).to_csv('./resultados.csv', index=False)
+    print('Terminou o completo')
+  error_lag = calc_error_lag(series, [48])
+  error_index = calc_error_index(series)
+  models = [
+    ('PageHinkley', XTSTreePageHinkley(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    
+    # ('PeriodicCut', XTSTreePeriodicCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    
+    # ('RandomCut_1', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    # ('RandomCut_2', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    # ('RandomCut_3', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    # ('RandomCut_4', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    # ('RandomCut_5', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
+    
+    # *[(f'TopDownReg_{lag}_25', XTSTreeTopDownReg(stop_val=error*0.25, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
+    *[(f'TopDownReg_{lag}_50', XTSTreeTopDownReg(stop_val=error*0.50, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
+    # *[(f'TopDownReg_{lag}_75', XTSTreeTopDownReg(stop_val=error*0.75, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
+    
+    ('TopDownIndex_25', XTSTreeTopDownIndex(stop_val=error_index*0.25, max_iter=100, min_dist=0)),
+    # ('TopDownIndex_50', XTSTreeTopDownIndex(stop_val=error_index*0.50, max_iter=100, min_dist=0)),
+    # ('TopDownIndex_75', XTSTreeTopDownIndex(stop_val=error_index*0.75, max_iter=100, min_dist=0)),
+  ]
+
+  for name, model in models:
+    try:
+      if f'{name}_{rep}_{child_file}' in skip_execs:
+        print(f'Pulei {f"{name}_{rep}_{child_file}"} porque já executei ele')
+      else:
+        fitted_model, mean_by_cut, n_items, tot_depth = fit_model(model=model, series=series)
+        segments = fitted_model.cut_series(series)
+        y_hat = []
+        complexities = []
+        time = perf_counter()
+        for segment in segments:
+          reg_model = get_regressor()
+          indexes = np.array([[i] for i, _ in enumerate(segment)])
+          reg_model.fit(indexes, segment)
+          prediction = reg_model.predict(indexes)
+          y_hat = y_hat + list(prediction)
+          complexities.append(reg_model.get_best()["complexity"])
+        end_t = perf_counter() - time
         output.append({
-          'nome': f'Full_{rep}_{child_file}',
-          'model': 'full',
-          'file': child_file,
-          'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, prediction_full),
-          'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, prediction_full),
-          'complexidade (média dos segmentos)': complexity_full,
-          'desvio padrão complexidade': 0,
+          'nome': f'{name}_{rep}_{child_file}',
+          'model': name,
+          'file': child_file[:-4],
+          'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, y_hat),
+          'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, y_hat),
+          'complexidade (média dos segmentos)': np.mean(complexities),
+          'desvio padrão complexidade': np.std(complexities),
           'tempo': end_t,
-          'ganho médio de entropia por corte': 0,
-          'numero de segmentos': 1,
+          'ganho médio de entropia por corte': mean_by_cut,
+          'numero de segmentos': len(segments),
         })
         pd.DataFrame(output).to_csv('./resultados.csv', index=False)
-        print('Terminou o completo')
-      error_lag = calc_error_lag(series, [48])
-      error_index = calc_error_index(series)
-      models = [
-        ('PageHinkley', XTSTreePageHinkley(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        
-        ('PeriodicCut', XTSTreePeriodicCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        
-        ('RandomCut_1', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        ('RandomCut_2', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        ('RandomCut_3', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        # ('RandomCut_4', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        # ('RandomCut_5', XTSTreeRandomCut(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
-        
-        # *[(f'TopDownReg_{lag}_25', XTSTreeTopDownReg(stop_val=error*0.25, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
-        *[(f'TopDownReg_{lag}_50', XTSTreeTopDownReg(stop_val=error*0.50, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
-        # *[(f'TopDownReg_{lag}_75', XTSTreeTopDownReg(stop_val=error*0.75, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
-        
-        ('TopDownIndex_25', XTSTreeTopDownIndex(stop_val=error_index*0.25, max_iter=100, min_dist=0)),
-        # ('TopDownIndex_50', XTSTreeTopDownIndex(stop_val=error_index*0.50, max_iter=100, min_dist=0)),
-        # ('TopDownIndex_75', XTSTreeTopDownIndex(stop_val=error_index*0.75, max_iter=100, min_dist=0)),
-      ]
-
-      for name, model in models:
-        try:
-          if f'{name}_{rep}_{child_file}' in skip_execs:
-            print(f'Pulei {f"{name}_{rep}_{child_file}"} porque já executei ele')
-          else:
-            fitted_model, mean_by_cut, n_items, tot_depth = fit_model(model=model, series=series)
-            segments = fitted_model.cut_series(series)
-            y_hat = []
-            complexities = []
-            time = perf_counter()
-            for segment in segments:
-              reg_model = get_regressor()
-              indexes = np.array([[i] for i, _ in enumerate(segment)])
-              reg_model.fit(indexes, segment)
-              prediction = reg_model.predict(indexes)
-              y_hat = y_hat + list(prediction)
-              complexities.append(reg_model.get_best()["complexity"])
-            end_t = perf_counter() - time
-            output.append({
-              'nome': f'{name}_{rep}_{child_file}',
-              'model': name,
-              'file': child_file[:-4],
-              'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, y_hat),
-              'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, y_hat),
-              'complexidade (média dos segmentos)': np.mean(complexities),
-              'desvio padrão complexidade': np.std(complexities),
-              'tempo': end_t,
-              'ganho médio de entropia por corte': mean_by_cut,
-              'numero de segmentos': len(segments),
-            })
-            pd.DataFrame(output).to_csv('./resultados.csv', index=False)
-            print(f'Terminei o {name}, Repetição {rep}')
-        except Exception as e:
-          print(f'Erro no PySR durante a execução nos segmentos')
-          print(f'{name}, Repetição {rep}')
-          print(f'Tamanho do segmento: {len(segment)}')
-          print(f'Equação: {reg_model.get_best()["equation"]}')
-          print(f'Erro: {e}')
+        print(f'Terminei o {name}, Repetição {rep}')
+    except Exception as e:
+      print(f'Erro no PySR durante a execução nos segmentos')
+      print(f'{name}, Repetição {rep}')
+      print(f'Tamanho do segmento: {len(segment)}')
+      print(f'Equação: {reg_model.get_best()["equation"]}')
+      print(f'Erro: {e}')
