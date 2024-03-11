@@ -1,0 +1,18 @@
+artigo
+	* estou escrevendo
+	* correções do bruno indicam que preciso ler mais artigos pra melhorar a escrita e ter referências
+	* seção de trabalhos correlatos
+	* sinto que o trabalho é um "chute" que deu certo, e não sinto firmeza na justificativa de usar o adf como condição de parada, por exemplo
+	* falar sobre a XTSTree ser um framework com a interpretabilidade vindo do heatmap
+	* outras implementações pra melhorar a árvore
+
+terminar a tese!!!
+	- datas
+
+	- o que precisa
+
+
+artigos
+	- prl e outros
+
+árvore também explica a série

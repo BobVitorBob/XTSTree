@@ -13,11 +13,11 @@ from time import perf_counter
 import os
 
 from XTSTree.XTSTree import XTSTree
-from segmentation_algorithms.topdown_index import XTSTreeTopDownIndex
+# from segmentation_algorithms.topdown_index import XTSTreeTopDownIndex
 from segmentation_algorithms.topdown_reg import XTSTreeTopDownReg
 from XTSTree.XTSTreePageHinkley import XTSTreePageHinkley
-from XTSTree.XTSTreeRandomCut import XTSTreeRandomCut
-from XTSTree.XTSTreePeriodicCut import XTSTreePeriodicCut
+# from XTSTree.XTSTreeRandomCut import XTSTreeRandomCut
+# from XTSTree.XTSTreePeriodicCut import XTSTreePeriodicCut
 
 from pysr import *
 
@@ -177,7 +177,7 @@ for par_file, child_file in all_files:
     *[(f'TopDownReg_{lag}_50', XTSTreeTopDownReg(stop_val=error*0.50, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
     # *[(f'TopDownReg_{lag}_75', XTSTreeTopDownReg(stop_val=error*0.75, max_iter=100, min_dist=0, lag=int(lag))) for lag, error in error_lag.items()],
     
-    ('TopDownIndex_25', XTSTreeTopDownIndex(stop_val=error_index*0.25, max_iter=100, min_dist=0)),
+    # ('TopDownIndex_25', XTSTreeTopDownIndex(stop_val=error_index*0.25, max_iter=100, min_dist=0)),
     # ('TopDownIndex_50', XTSTreeTopDownIndex(stop_val=error_index*0.50, max_iter=100, min_dist=0)),
     # ('TopDownIndex_75', XTSTreeTopDownIndex(stop_val=error_index*0.75, max_iter=100, min_dist=0)),
   ]

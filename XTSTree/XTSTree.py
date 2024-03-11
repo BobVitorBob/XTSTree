@@ -121,7 +121,7 @@ class XTSTree:
     # Soma um na posição porque passa a série sem o primeiro e último elemento porque não são opções de posição de corte
     cut_pos+=1
     # Retorna None se ele não achar corte válido, indicando que o nó é folha
-    if cut_pos < 0:
+    if cut_pos <= 0:
       return None
     if list(heatmap):
       min_hm = min(heatmap)

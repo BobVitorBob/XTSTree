@@ -60,14 +60,19 @@ for par_file in par_files:
       ]
 
       for name, model in models:
-        fitted_model, mean_by_cut, n_items, tot_depth = fit_model(model=model, series=series)
-        segments = fitted_model.cut_series(series)
-        output.append({
-          'nome': f'{name}_{rep}_{child_file}',
-          'model': name,
-          'file': child_file[:-4],
-          'ganho médio de entropia por corte': mean_by_cut,
-          'numero de segmentos': len(segments),
-        })
-        pd.DataFrame(output).to_csv('./resultados_entropy.csv', index=False)
-        print(f'Terminei o {name}, Repetição {rep}')
+        try:
+          print(f'Fazendo o {name}, Repetição {rep}')
+          fitted_model, mean_by_cut, n_items, tot_depth = fit_model(model=model, series=series)
+          segments = fitted_model.cut_series(series)
+          output.append({
+            'nome': f'{name}_{rep}_{child_file}',
+            'model': name,
+            'file': child_file[:-4],
+            'ganho médio de entropia por corte': mean_by_cut,
+            'numero de segmentos': len(segments),
+          })
+          pd.DataFrame(output).to_csv('./resultados_entropy.csv', index=False)
+          print(f'Terminei o {name}, Repetição {rep}')
+        except:
+          print('deu pau')
+          print(f'{name}, Repetição {rep}')

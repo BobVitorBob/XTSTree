@@ -1,0 +1,38 @@
+timeline
+
+	prl -> sensors
+ 
+	fechar o artigo e mandar pro sylvio
+ 
+	scholar dá maneiras de explicar, coloca a frase "a porque a (nome da técnica) faz isso e isso" e acha artigos falando sobre
+ 
+	chatgpt naaaaaaaaaaaaaaaaaaaao
+ 
+		estilo de escrita
+
+  fazer um diagrama do artigo quando travar
+  
+  diagrama da árvore v2
+
+
+Entropia:
+	O quão "distribuído" as classes de um conjunto de dados são
+	Se a proporção de classes está igualmente dividida (50% para cada com 2 classes, 33% com 3, etc), a entropia é alta
+
+Ganho de informação:
+	O quanto a entropia diminui ou aumenta após um corte ou decisão
+
+Aplicação na XTSTree:
+	Algo similar ao ganho de informação pode ser calculado com ganho/perda de erro/complexidade da fórmula conforme os cortes são feitos
+
+	Problema:
+		A complexidade da fórmula tem se mostrado inconsistente.
+
+	Soluções possíveis:
+		- Ver o quão complexa uma fórmula precisa ser pra atingir o mesmo erro/uma porcentagem do erro da fórmula aplicada na série completa. Ou seja, o quão maior/menor é a complexidade da fórmula, sabendo que ela tem um erro igual ou menor ao da fórmula na série completa.
+			- Problemas:
+				Pra isso, é preciso atingir uma forma consistente de alcançar a complexidade necessária para a fórmula na série completa.
+				Não tem "entropia" sem complexidade, o que atrela a XTSTree à regressão simbólica	
+		
+		- Ganho/Perda de estacionariedade pode ser visto como ganho/perda de entropia
+		
