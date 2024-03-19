@@ -3,7 +3,6 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-from scipy import stats
 
 
 if len(sys.argv) > 1:
@@ -12,21 +11,27 @@ else:
   nome_arq = 'resultados backup.csv'
 # Lendo dados e criando lista de modelos e estatísticas de interesse
 
+# Dropa nulo
 dados = pd.read_csv(nome_arq).replace([np.inf, -np.inf], np.nan).dropna(axis=0, how='any').reset_index(drop=True)
-
-dados = dados[(np.abs(stats.zscore(dados['ganho médio de entropia por corte'])) < 3)]
-
-# print(len(dados))
-# print(len(dados['nome'].unique()))
-
-# dados = dados[(dados['numero de segmentos'] > 1) | (dados['model'] == 'full')]
 
 modelos = [
   # 'full',
   'PageHinkley',
   'TopDownReg',
-  'TopDownIndex',
+  # 'TopDownIndex',
 ]
+
+# Pega só o que tá em modelos
+dados = dados[dados['model'].str.startswith(tuple(modelos))]
+
+# Filtra cópias
+dados.index = dados['nome']
+dados = dados.groupby(level=0).first()
+dados = dados.reset_index(drop=True)
+print('Execuções únicas: ', len(dados))
+# Filtra execuções que pelo menos um dos modelos falhou
+dados = dados[dados['file'].apply(lambda file: len(dados[dados['file'] == file]) == len(modelos))]
+
 
 lengths = list(set([re.search(r'(.*)dias_umidrelmed2m', file).groups()[0] for file in list(dados['file'])]))
 
@@ -78,68 +83,68 @@ for length in lengths:
   colors = plt.colormaps['magma'].reversed()(np.linspace(0, 1, 10)[1:-3])
 
   # Criando disposição dos plots e tamanho da figura
-  fig, ((axMAE, axRMSE, axTempo), (axNseg, axComp, axStdComp)) = plt.subplots(nrows=2, ncols=3, figsize=(10,6))
+  fig, ((axMAE, axRMSE, axTempo), (axNseg, axComp, axStdComp)) = plt.subplots(nrows=2, ncols=3, figsize=(14,8))
 
   # Plotando as figuras nos axes
   axMAE.bar(modelos,  estatisticas_df.mean_MAE, width=0.4, yerr = estatisticas_df.std_MAE, color=colors)
-  axMAE.set_xlabel('modelo')
+  axMAE.set_xlabel('Model')
   axMAE.tick_params(axis='x', labelrotation=45)
   axMAE.set_ylabel('MAE')
   axMAE.set_ylim((
     0,
     max([estatisticas_df['mean_MAE'][model]+estatisticas_df['std_MAE'][model] for model in modelos]) + 0.5,  
   ))
-  axMAE.set_title('MAE (Menor é melhor)')
+  axMAE.set_title('MAE (Less is better)')
 
   axComp.bar(modelos,  estatisticas_df.mean_comp, width=0.4, yerr = estatisticas_df.std_comp, color=colors)
-  axComp.set_xlabel('modelo')
+  axComp.set_xlabel('Model')
   axComp.tick_params(axis='x', labelrotation=45)
-  axComp.set_ylabel('Complexidade')
-  axComp.set_title('Complexidade (Menor é melhor)')
+  axComp.set_ylabel('Complexity')
+  axComp.set_title('Complexity (Less is better)')
 
   axStdComp.bar(modelos,  estatisticas_df.mean_std_comp, width=0.4, yerr = estatisticas_df.std_std_comp, color=colors)
-  axStdComp.set_xlabel('modelo')
+  axStdComp.set_xlabel('Model')
   axStdComp.tick_params(axis='x', labelrotation=45)
-  axStdComp.set_ylabel('Desvio padrão Comp.')
+  axStdComp.set_ylabel('Complexity standard deviation')
   axStdComp.set_ylim((
     min([estatisticas_df['mean_std_comp'][model]-estatisticas_df['std_std_comp'][model] for model in modelos]) - 0.5,
     max([estatisticas_df['mean_std_comp'][model]+estatisticas_df['std_std_comp'][model] for model in modelos]) + 0.5,  
   ))
-  axStdComp.set_title('Desvio padrão da complexidade\ndos segmentos (Menor é mais consistente)')
+  axStdComp.set_title('Complexity standard deviation\nof segments (Less is more consistent)')
 
 
   axRMSE.bar(modelos,  estatisticas_df.mean_RMSE, width=0.4, yerr = estatisticas_df.std_RMSE, color=colors)
-  axRMSE.set_xlabel('modelo')
+  axRMSE.set_xlabel('Model')
   axRMSE.tick_params(axis='x', labelrotation=45)
   axRMSE.set_ylabel('RMSE')
   axRMSE.set_ylim((
     0,
     max([estatisticas_df['mean_RMSE'][model]+estatisticas_df['std_RMSE'][model] for model in modelos]) + 0.5,  
   ))
-  axRMSE.set_title('RMSE (Menor é melhor)')
+  axRMSE.set_title('RMSE (Less is better)')
 
   axNseg.bar(modelos,  estatisticas_df.mean_num_seg, width=0.4, yerr = estatisticas_df.std_num_seg, color=colors)
-  axNseg.set_xlabel('modelo')
+  axNseg.set_xlabel('Model')
   axNseg.tick_params(axis='x', labelrotation=45)
-  axNseg.set_ylabel('Num. de segmentos')
+  axNseg.set_ylabel('Number of segments')
   axNseg.set_ylim((
     0,
-    25,  
+    max([estatisticas_df['mean_num_seg'][model]+estatisticas_df['std_num_seg'][model] for model in modelos]) + 0.5,
   ))
-  axNseg.set_title('Número de segmentos (Menor é melhor)')
+  axNseg.set_title('Number of segments (Less is better)')
 
   axTempo.bar(modelos,  estatisticas_df.mean_tempo, width=0.4, yerr = estatisticas_df.std_tempo, color=colors)
-  axTempo.set_xlabel('modelo')
+  axTempo.set_xlabel('Model')
   axTempo.tick_params(axis='x', labelrotation=45)
-  axTempo.set_ylabel('Tempo de exec. SymbReg')
+  axTempo.set_ylabel('SymbReg execution time')
   axTempo.set_ylim((
     0,
-    max([estatisticas_df['mean_tempo'][model]+estatisticas_df['std_tempo'][model] for model in modelos]) + 0.5,  
+    max([estatisticas_df['mean_tempo'][model]+estatisticas_df['std_tempo'][model] for model in modelos]) + 0.5,
   ))
-  axTempo.set_title('Tempo de execução nos segmentos (Menor é melhor)')
+  axTempo.set_title('SymbReg segment execution time (Less is better)')
 
   # Ajuste de espaço vertical, salva a imagem e plot final
-  plt.subplots_adjust(hspace=0.4, wspace=0.2)
-  plt.savefig(f'{nome_arq[:-4]}_{length}.pdf', bbox_inches='tight')
+  plt.subplots_adjust(hspace=0.8, wspace=0.4)
+  plt.savefig(f'resultados_2_modelos_{length}.pdf', bbox_inches='tight')
   print('Tamanho ', length)
   print(estatisticas_df.num_res)
