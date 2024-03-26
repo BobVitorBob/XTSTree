@@ -55,9 +55,10 @@ from statsmodels.tsa.stattools import adfuller
 # fig, ((axEST, axnEST)) = plt.subplots(nrows=2, ncols=1, figsize=(8,5))
 # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
 
-# ax.plot(est_series, linewidth=0.5)
-# ax.plot(yhat, linewidth=0.5)
-# ax.set_title(f'Formula: {model.get_best()["equation"]}')
+ax.plot(est_series, linewidth=0.5)
+ax.plot(yhat, linewidth=0.5)
+print(model.latex())
+ax.set_title(f'Formula: ${model.latex()}$ ')
 # ax.set_ylim((min([*nest_series, *est_series]) + 2, max([*nest_series, *est_series]) + 2))
 
 # axEST.plot(est_series, linewidth=0.5)

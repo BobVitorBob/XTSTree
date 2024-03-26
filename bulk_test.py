@@ -117,13 +117,21 @@ for all_series in zip(*dict_files.values()):
 par_files = [child.split('_')[0] for child in concat_childs]
 all_files = [[par, child] for par, child in zip(par_files, concat_childs)]
 
-for par_file, child_file in all_files:
+number_of_files = len(all_files)
+
+pular_execs = ['_'.join(exec.split('_')[-4:]) for exec in skip_execs]
+all_files = list(filter(lambda par_child: (par_child[1] not in pular_execs) and (par_child[1][-1] != '_'), all_files))
+
+print(f'{len(all_files)} arquivos para executar')
+
+for i, (par_file, child_file) in enumerate(all_files):
   expected_len = (int(re.sub("[^0-9]", "", par_file)) * 96)
 
   if child_file == f'{par_file}_':
     print(f'Série de padding, {child_file}')
     continue
 
+  print(f'{round(100*(i+number_of_files-len(all_files))/number_of_files, 2)}% (de 100)')
   series = treat_or_discard_series(
     load_series(file_name=f'{par_file}/{child_file}'),
     perc_cut=0.5,
@@ -135,33 +143,33 @@ for par_file, child_file in all_files:
     continue
   
   print(f'Repetição {rep}, Arquivo {child_file}')
-  if f'Full_{rep}_{child_file}' in skip_execs:
-    print('Pulei o completo porque já foi executado')
-  else:
-    reg_model = get_regressor()
-    indexes = np.array([[i] for i, _ in enumerate(series)])
-    t = perf_counter()
-    reg_model.fit(indexes, series)
-    end_t = perf_counter() - t
+  # if f'Full_{rep}_{child_file}' in skip_execs:
+  #   print('Pulei o completo porque já foi executado')
+  # else:
+  #   reg_model = get_regressor()
+  #   indexes = np.array([[i] for i, _ in enumerate(series)])
+  #   t = perf_counter()
+  #   reg_model.fit(indexes, series)
+  #   end_t = perf_counter() - t
 
-    complexity_full = reg_model.get_best()["complexity"]
-    prediction_full = reg_model.predict(indexes)
-    output.append({
-      'nome': f'Full_{rep}_{child_file}',
-      'model': 'full',
-      'file': child_file,
-      'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, prediction_full),
-      'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, prediction_full),
-      'complexidade (média dos segmentos)': complexity_full,
-      'desvio padrão complexidade': 0,
-      'tempo': end_t,
-      'ganho médio de entropia por corte': 0,
-      'numero de segmentos': 1,
-    })
-    pd.DataFrame(output).to_csv('./resultados.csv', index=False)
-    print('Terminou o completo')
+  #   complexity_full = reg_model.get_best()["complexity"]
+  #   prediction_full = reg_model.predict(indexes)
+  #   output.append({
+  #     'nome': f'Full_{rep}_{child_file}',
+  #     'model': 'full',
+  #     'file': child_file,
+  #     'MAE (erro entre a série inteira e a predição de todos os segmentos)': mae(series, prediction_full),
+  #     'RMSE (erro entre a série inteira e a predição de todos os segmentos)': rmse(series, prediction_full),
+  #     'complexidade (média dos segmentos)': complexity_full,
+  #     'desvio padrão complexidade': 0,
+  #     'tempo': end_t,
+  #     'ganho médio de entropia por corte': 0,
+  #     'numero de segmentos': 1,
+  #   })
+  #   pd.DataFrame(output).to_csv('./resultados.csv', index=False)
+  #   print('Terminou o completo')
   error_lag = calc_error_lag(series, [48])
-  error_index = calc_error_index(series)
+  # error_index = calc_error_index(series)
   models = [
     ('PageHinkley', XTSTreePageHinkley(stop_condition='adf', stop_val=0, max_iter=100, min_dist=0)),
     

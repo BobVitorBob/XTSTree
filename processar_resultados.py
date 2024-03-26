@@ -84,7 +84,7 @@ for length in lengths:
   colors = plt.colormaps['magma'].reversed()(np.linspace(0, 1, 10)[1:-3])
 
   # Criando disposição dos plots e tamanho da figura
-  fig, ((axMAE, axRMSE, axTempo), (axNseg, axComp, axStdComp)) = plt.subplots(nrows=2, ncols=3, figsize=(14,8))
+  fig, ((axMAE, axRMSE, axTempo), (axNseg, axComp, axStdComp)) = plt.subplots(nrows=2, ncols=3, figsize=(10,6))
 
   # Plotando as figuras nos axes
   axMAE.bar(modelos,  estatisticas_df.mean_MAE, width=0.4, yerr = estatisticas_df.std_MAE, color=colors)
@@ -106,7 +106,7 @@ for length in lengths:
   axStdComp.bar(modelos,  estatisticas_df.mean_std_comp, width=0.4, yerr = estatisticas_df.std_std_comp, color=colors)
   axStdComp.set_xlabel('Model')
   axStdComp.tick_params(axis='x', labelrotation=45)
-  axStdComp.set_ylabel('Complexity standard deviation')
+  axStdComp.set_ylabel('Standard deviation')
   axStdComp.set_ylim((
     min([estatisticas_df['mean_std_comp'][model]-estatisticas_df['std_std_comp'][model] for model in modelos]) - 0.5,
     max([estatisticas_df['mean_std_comp'][model]+estatisticas_df['std_std_comp'][model] for model in modelos]) + 0.5,  
@@ -137,15 +137,15 @@ for length in lengths:
   axTempo.bar(modelos,  estatisticas_df.mean_tempo, width=0.4, yerr = estatisticas_df.std_tempo, color=colors)
   axTempo.set_xlabel('Model')
   axTempo.tick_params(axis='x', labelrotation=45)
-  axTempo.set_ylabel('SymbReg execution time')
+  axTempo.set_ylabel('Execution time')
   axTempo.set_ylim((
     0,
     max([estatisticas_df['mean_tempo'][model]+estatisticas_df['std_tempo'][model] for model in modelos]) + 0.5,
   ))
-  axTempo.set_title('SymbReg segment execution time (Less is better)')
+  axTempo.set_title('SymbReg segment execution\ntime (Less is better)')
 
   # Ajuste de espaço vertical, salva a imagem e plot final
-  plt.subplots_adjust(hspace=0.8, wspace=0.4)
+  plt.subplots_adjust(hspace=1, wspace=0.4)
   plt.savefig(f'resultados_{len(modelos)}_modelos_{length}.pdf', bbox_inches='tight')
   print('Tamanho ', length)
   print(estatisticas_df.num_res)
