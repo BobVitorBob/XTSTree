@@ -20,5 +20,6 @@ results
 *.jpg
 imagens_quali
 .venv
+venv
 symbreg_objects
 resultados.pdf
