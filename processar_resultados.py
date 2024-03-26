@@ -18,16 +18,17 @@ modelos = [
   # 'full',
   'PageHinkley',
   'TopDownReg',
-  # 'TopDownIndex',
+  'TopDownIndex',
 ]
 
 # Pega só o que tá em modelos
 dados = dados[dados['model'].str.startswith(tuple(modelos))]
 
 # Filtra cópias
-dados.index = dados['nome']
-dados = dados.groupby(level=0).first()
-dados = dados.reset_index(drop=True)
+dados = dados.set_index('nome').groupby(level=0).first().reset_index(drop=True)
+
+# dados = dados[dados['numero de segmentos'] > 1]
+
 print('Execuções únicas: ', len(dados))
 # Filtra execuções que pelo menos um dos modelos falhou
 dados = dados[dados['file'].apply(lambda file: len(dados[dados['file'] == file]) == len(modelos))]
@@ -145,6 +146,6 @@ for length in lengths:
 
   # Ajuste de espaço vertical, salva a imagem e plot final
   plt.subplots_adjust(hspace=0.8, wspace=0.4)
-  plt.savefig(f'resultados_2_modelos_{length}.pdf', bbox_inches='tight')
+  plt.savefig(f'resultados_{len(modelos)}_modelos_{length}.pdf', bbox_inches='tight')
   print('Tamanho ', length)
   print(estatisticas_df.num_res)

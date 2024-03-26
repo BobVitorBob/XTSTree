@@ -43,7 +43,7 @@ estatisticas_df = pd.DataFrame(resultados, index=modelos)
 colors = plt.colormaps['magma'].reversed()(np.linspace(0, 1, 10)[1:-3])
 
 # Criando disposição dos plots e tamanho da figura
-fig, ((axEntGain)) = plt.subplots(nrows=1, ncols=1, figsize=(10,10))
+fig, ((axEntGain)) = plt.subplots(nrows=1, ncols=1, figsize=(5,5))
 
 print(estatisticas_df)
 
@@ -57,7 +57,7 @@ print(estatisticas_df)
 # ))
 # axNseg.set_title('Number of segments (Smaller is better)')
 
-axEntGain.bar(modelos,  estatisticas_df.mean_ent_gain, yerr = estatisticas_df.std_ent_gain, color=colors)
+axEntGain.bar(modelos, estatisticas_df.mean_ent_gain, yerr = estatisticas_df.std_ent_gain, color=colors, width=0.6)
 axEntGain.set_xlabel('Model')
 axEntGain.tick_params(axis='x', labelrotation=45)
 axEntGain.set_ylabel('Entropy')
@@ -68,7 +68,7 @@ axEntGain.set_ylim((
 axEntGain.set_title('Mean entropy by cut (Smaller is better)')
 
 # Ajuste de espaço vertical, salva a imagem e plot final
-plt.subplots_adjust(hspace=0.4, wspace=0.2)
+plt.subplots_adjust(hspace=0.2, wspace=0.2)
 plt.savefig(f'{nome_arq[:-4]}.pdf', bbox_inches='tight')
 plt.show()
 

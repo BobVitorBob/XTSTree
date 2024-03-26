@@ -11,6 +11,13 @@ river_copy/*
 diagrama/*
 datasets/*
 results
+*.pdf
+*.jpeg
+*.txt
+*.png
+*.drawio
+*.csv
+*.jpg
 imagens_quali
 .venv
 symbreg_objects
