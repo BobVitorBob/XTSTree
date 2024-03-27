@@ -18,7 +18,7 @@ modelos = [
   # 'full',
   'PageHinkley',
   'TopDownReg',
-  'TopDownIndex',
+  # 'TopDownIndex',
 ]
 
 # Pega só o que tá em modelos

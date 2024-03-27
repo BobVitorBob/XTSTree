@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib.collections import LineCollection
 
 
-def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], margins=None, title='', save=False, img_name=None, show=True, divisions=[], sec_plots=[], figsize=(4,2), dpi=360, color_gradient=None, color_pallete='viridis', backgrounds=[], show_axis: (bool, bool)=(True, True), frame=True, max_y=None, min_y=None):
+def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], margins=None, title='', save=False, img_name=None, show=True, divisions=[], sec_plots=[], figsize=(4,2), dpi=360, color_gradient=None, color_pallete='viridis', backgrounds=[], show_axis: (bool, bool)=(True, True), frame=True, max_y=None, min_y=None, labelrotation=45):
   X=range(len(vals))
   if max_y is None:
     max_y = max([max(vals), *[max(sec_val) for sec_val in sec_plots]])
@@ -43,7 +43,7 @@ def plot(vals, labels=None, detected_anomalies=[], continuous_anomalies=[], marg
  
   if labels:
     plt.xticks([label['x'] for label in labels], [label['label'] for label in labels])
-    ax.tick_params(axis='x', labelrotation=45)
+    ax.tick_params(axis='x', labelrotation=labelrotation)
   for subplot in sec_plots:
     plt.plot(subplot, linewidth=0.5, color='r')
   for i in detected_anomalies:
